@@ -98,6 +98,17 @@ class Sample:
     control: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class BrakeCommand:
+    command: int
+    pump_request: bool
+    brake_request: bool
+    state_flags: int
+    counter: int
+    checksum: int
+    checksum_valid: bool
+
+
 def motorola(data: bytes, start_bit: int, length: int) -> int:
     """Extract one unsigned DBC Motorola signal."""
     byte_index, bit_index = divmod(start_bit, 8)
@@ -263,6 +274,42 @@ def frame_at(log: LogData, can_id: int, time_us: int) -> Frame | None:
     times = log.times_by_id.get(can_id, [])
     index = bisect.bisect_right(times, time_us) - 1
     return series[index] if index >= 0 else None
+
+
+def honda_checksum(address: int, data: bytes) -> int:
+    """Return the standard Honda four-bit checksum."""
+    total = 0
+    extended = address > 0x7FF
+    while address:
+        total += address & 0xF
+        address >>= 4
+    for index, value in enumerate(data):
+        if index == len(data) - 1:
+            value >>= 4
+        total += (value & 0xF) + (value >> 4)
+    return (8 - total + (3 if extended else 0)) & 0xF
+
+
+def decode_1c0(data: bytes) -> BrakeCommand:
+    if len(data) != 7:
+        raise ValueError(f"0x1C0 requires DLC 7, got {len(data)}")
+    return BrakeCommand(
+        command=(data[0] << 2) | (data[1] >> 6),
+        pump_request=bool(data[1] & 0x01),
+        brake_request=bool(data[2] & 0x01),
+        state_flags=data[2] & 0xFE,
+        counter=(data[6] >> 4) & 0x03,
+        checksum=data[6] & 0x0F,
+        checksum_valid=(data[6] & 0x0F) == honda_checksum(0x1C0, data),
+    )
+
+
+def counter_continuity(frames: list[Frame]) -> tuple[int, int]:
+    counters = [decode_1c0(frame.data).counter for frame in frames]
+    return (
+        sum(current == (previous + 1) % 4 for previous, current in zip(counters, counters[1:])),
+        max(0, len(counters) - 1),
+    )
 
 
 def masked_payload(data: bytes) -> bytes:
@@ -523,11 +570,7 @@ def rank_candidates(
     ranked.sort(key=lambda row: (-float(row["score"]), int(row["can_id"]), str(row["feature"])))
     best_by_id: dict[int, dict[str, object]] = {}
     for row in ranked:
-        can_id = int(row["can_id"])
-        if can_id == 0x1C0 and row["feature"] == "D3.b0":
-            best_by_id[can_id] = row
-        else:
-            best_by_id.setdefault(can_id, row)
+        best_by_id.setdefault(int(row["can_id"]), row)
     return list(best_by_id.values())
 
 
@@ -637,27 +680,94 @@ def capture_state(log: LogData) -> dict[str, object]:
     }
 
 
-def feature_active_fraction(log: LogData, can_id: int, name: str) -> float:
-    frames = log.by_id.get(can_id, [])
-    return sum(bool(feature_value(frame.data, name)) for frame in frames) / len(frames) if frames else 0.0
+def pressure_raw(frame: Frame) -> int:
+    return max(motorola(frame.data, 7, 10), motorola(frame.data, 9, 10))
 
 
-def feature_runs(log: LogData, can_id: int, name: str) -> list[tuple[int, int]]:
-    runs: list[tuple[int, int]] = []
-    start: int | None = None
-    last: int | None = None
-    for frame in log.by_id.get(can_id, []):
-        active = bool(feature_value(frame.data, name))
-        if active and start is None:
-            start = frame.time_us
-        if active:
-            last = frame.time_us
-        elif start is not None and last is not None:
-            runs.append((start, last))
-            start = last = None
-    if start is not None and last is not None:
-        runs.append((start, last))
-    return runs
+def pearson(left: list[float], right: list[float]) -> float | None:
+    if len(left) < 2 or len(left) != len(right):
+        return None
+    left_mean = statistics.mean(left)
+    right_mean = statistics.mean(right)
+    numerator = sum(
+        (x - left_mean) * (y - right_mean)
+        for x, y in zip(left, right)
+    )
+    denominator = (
+        sum((x - left_mean) ** 2 for x in left)
+        * sum((y - right_mean) ** 2 for y in right)
+    ) ** 0.5
+    return numerator / denominator if denominator else None
+
+
+def best_command_pressure_lag(
+    captures: list[tuple[LogData, list[Event]]],
+) -> tuple[int | None, float | None, int]:
+    best: tuple[int | None, float | None, int] = (None, None, 0)
+    for lag_ms in range(-500, 501, 20):
+        commands: list[float] = []
+        pressures: list[float] = []
+        for log, capture_events in captures:
+            for event in capture_events:
+                for frame in frames_between(
+                    log, 0x1C0, event.start_us - 500_000, event.end_us + 800_000
+                ):
+                    pressure = frame_at(log, 0x1E7, frame.time_us + lag_ms * 1_000)
+                    if pressure is not None:
+                        commands.append(decode_1c0(frame.data).command)
+                        pressures.append(pressure_raw(pressure))
+        correlation = pearson(commands, pressures)
+        if correlation is not None and (best[1] is None or correlation > best[1]):
+            best = lag_ms, correlation, len(commands)
+    return best
+
+
+def event_dynamics(log: LogData, event: Event) -> dict[str, object]:
+    before = frames_between(log, 0x1C0, event.start_us - 500_000, event.start_us - 100_000)
+    commands = frames_between(log, 0x1C0, event.start_us - 200_000, event.end_us + 1_000_000)
+    pressure_before = frames_between(
+        log, 0x1E7, event.start_us - 500_000, event.start_us - 100_000
+    )
+    pressures = frames_between(log, 0x1E7, event.start_us, event.end_us + 500_000)
+    baseline = statistics.median(decode_1c0(frame.data).command for frame in before)
+    peak_frame = max(commands, key=lambda frame: decode_1c0(frame.data).command)
+    peak = decode_1c0(peak_frame.data).command
+    threshold = baseline + max(1, (peak - baseline) * 0.05)
+    onset = next(
+        (frame for frame in commands
+         if frame.time_us <= peak_frame.time_us
+         and decode_1c0(frame.data).command >= threshold),
+        None,
+    )
+    release = next(
+        (frame for frame in commands
+         if frame.time_us >= peak_frame.time_us
+         and decode_1c0(frame.data).command < threshold),
+        None,
+    )
+    pressure_baseline = statistics.median(pressure_raw(frame) for frame in pressure_before)
+    pressure_peak_frame = max(pressures, key=pressure_raw)
+    pressure_peak = pressure_raw(pressure_peak_frame)
+    pump = sample_event(log, event, 0x1C0, "D2.b0", False)
+    request = sample_event(log, event, 0x1C0, "D3.b0", False)
+    return {
+        "baseline": baseline,
+        "peak": peak,
+        "peak_d1": max(frame.data[0] for frame in commands),
+        "ramp_up_ms": (
+            (peak_frame.time_us - onset.time_us) / 1_000 if onset is not None else None
+        ),
+        "ramp_down_ms": (
+            (release.time_us - peak_frame.time_us) / 1_000 if release is not None else None
+        ),
+        "pressure_baseline": pressure_baseline,
+        "pressure_peak": pressure_peak,
+        "pressure_rise": pressure_peak - pressure_baseline,
+        "peak_lag_ms": (pressure_peak_frame.time_us - peak_frame.time_us) / 1_000,
+        "pump_onset_ms": pump.onset_ms if pump is not None else None,
+        "request_onset_ms": request.onset_ms if request is not None else None,
+        "request_release_ms": request.release_ms if request is not None else None,
+    }
 
 
 def format_ms(value: object) -> str:
@@ -797,48 +907,129 @@ def render_report(
             f"`{example_payloads(row, logs, events)}` |"
         )
 
-    focus = next(
-        (row for row in ranked if int(row["can_id"]) == 0x1C0 and row["feature"] == "D3.b0"),
-        next((row for row in ranked if int(row["can_id"]) not in KNOWN_IDS), None),
+    lines += [
+        "",
+        "## Structural analysis of `0x1C0`",
+        "",
+        "`0x1C0` is analyzed here as one seven-byte message, not as unrelated ranked "
+        "fields. Its first three candidate fields occupy the same positions as the standard "
+        "Honda Nidec [`BRAKE_COMMAND`](https://github.com/commaai/opendbc/blob/master/"
+        "opendbc/dbc/generator/honda/_nidec_common.dbc):",
+        "",
+        "```text",
+        "command       = (D1 << 2) | (D2 >> 6)",
+        "pump_request  = D2.b0",
+        "brake_request = D3.b0",
+        "state_flags   = D3 & 0xFE",
+        "counter       = D7[5:4]",
+        "checksum      = D7[3:0]",
+        "```",
+        "",
+        "Names remain provisional; positional similarity and correlation do not prove that "
+        "the message is safe to transmit.",
+        "",
+        "| Capture | Frames | DLC | Command range | Pump active | Brake request active | D3 state values | D4–D6 nonzero | Checksum pass | Counter continuity |",
+        "|---|---:|---|---|---:|---:|---|---:|---:|---:|",
+    ]
+    for role in ROLE_ORDER:
+        log = logs[role]
+        frames = log.by_id.get(0x1C0, [])
+        decoded = [decode_1c0(frame.data) for frame in frames]
+        counter_ok, counter_total = counter_continuity(frames)
+        lines.append(
+            f"| `{log.path.name}` | {len(frames)} | "
+            f"{sorted({len(frame.data) for frame in frames})} | "
+            f"{min(item.command for item in decoded)}–{max(item.command for item in decoded)} | "
+            f"{sum(item.pump_request for item in decoded) / len(decoded):.2%} | "
+            f"{sum(item.brake_request for item in decoded) / len(decoded):.2%} | "
+            f"{', '.join(f'0x{value:02X}' for value in sorted({item.state_flags for item in decoded}))} | "
+            f"{sum(any(frame.data[3:6]) for frame in frames)} | "
+            f"{sum(item.checksum_valid for item in decoded)}/{len(decoded)} "
+            f"({sum(item.checksum_valid for item in decoded) / len(decoded):.2%}) | "
+            f"{counter_ok}/{counter_total} "
+            f"({counter_ok / counter_total:.2%}) |"
+        )
+
+    lines += [
+        "",
+        "### Remaining D3 flags",
+        "",
+        "Active fraction of each D3 state bit after excluding `D3.b0`:",
+        "",
+        "| Flag | " + " | ".join(f"`{logs[role].path.name}`" for role in ROLE_ORDER) + " |",
+        "|---|" + "|".join("---:" for _ in ROLE_ORDER) + "|",
+    ]
+    for bit in range(7, 0, -1):
+        rates = [
+            sum(bool(frame.data[2] & (1 << bit)) for frame in logs[role].by_id[0x1C0])
+            / len(logs[role].by_id[0x1C0])
+            for role in ROLE_ORDER
+        ]
+        lines.append(
+            f"| `D3.b{bit}` | " + " | ".join(f"{rate:.2%}" for rate in rates) + " |"
+        )
+
+    dynamics: list[tuple[LogData, Event, dict[str, object]]] = []
+    for role in ROLE_ORDER:
+        dynamics += [
+            (logs[role], event, event_dynamics(logs[role], event))
+            for event in events[role]
+        ]
+    lines += [
+        "",
+        "### Command ramp and pressure response",
+        "",
+        "Ramp-up is measured from the first 5% command crossing to the first maximum; "
+        "ramp-down runs from that maximum until the command returns below the same threshold.",
+        "",
+        "| Capture / interval | Command baseline → max | Ramp-up | Ramp-down | Pump onset | Brake request onset → release | 0x1E7 baseline → max (rise) | Peak pressure lag |",
+        "|---|---|---:|---:|---:|---|---|---:|",
+    ]
+    for log, event, item in dynamics:
+        lines.append(
+            f"| `{log.path.name}` #{event.index} | "
+            f"{float(item['baseline']):.0f} → {int(item['peak'])} "
+            f"(D1 max {item['peak_d1']}) | "
+            f"{format_ms(item['ramp_up_ms'])} | {format_ms(item['ramp_down_ms'])} | "
+            f"{format_ms(item['pump_onset_ms'])} | "
+            f"{format_ms(item['request_onset_ms'])} → "
+            f"{format_ms(item['request_release_ms'])} | "
+            f"{float(item['pressure_baseline']):.0f} → {item['pressure_peak']} "
+            f"(+{float(item['pressure_rise']):.0f}) | "
+            f"{format_ms(item['peak_lag_ms'])} |"
+        )
+    maxima_correlation = pearson(
+        [float(item["peak"]) for _, _, item in dynamics],
+        [float(item["pressure_rise"]) for _, _, item in dynamics],
     )
-    if focus:
-        lines += [
-            "",
-            f"## Focused evidence: `0x{int(focus['can_id']):03X} {focus['feature']}`",
-            "",
-            "| Positive capture | Marker intervals | Matching intervals | Median onset | Median release | Candidate active runs |",
-            "|---|---:|---:|---:|---:|---|",
-        ]
-        details = focus["capture_details"]
-        for role in ROLE_ORDER:
-            if not events[role]:
-                continue
-            log = logs[role]
-            item = details[role]
-            origin = log.frames[0].time_us
-            runs = feature_runs(log, int(focus["can_id"]), str(focus["feature"]))
-            run_text = ", ".join(
-                f"{(start - origin) / 1_000_000:.3f}–{(end - origin) / 1_000_000:.3f} s"
-                for start, end in runs
-            ) or "none"
-            lines.append(
-                f"| `{log.path.name}` | {item['intervals']} | {item['matched']} | "
-                f"{format_ms(item['onset_ms'])} | {format_ms(item['release_ms'])} | {run_text} |"
-            )
-        lines += [
-            "",
-            "| Negative capture | Candidate active fraction | COMPUTER_BRAKING active fraction |",
-            "|---|---:|---:|",
-        ]
-        for role in ROLE_ORDER:
-            if events[role]:
-                continue
-            log = logs[role]
-            lines.append(
-                f"| `{log.path.name}` | "
-                f"{feature_active_fraction(log, int(focus['can_id']), str(focus['feature'])):.2%} | "
-                f"{signal_rate(log, 0x1A4, 23, 1):.2%} |"
-            )
+    lines += [
+        "",
+        f"Across these {len(dynamics)} CAN-state intervals, Pearson correlation between "
+        f"maximum command and maximum pressure rise is **{maxima_correlation:.3f}**. "
+        "Intervals are not assumed to be independent physical maneuvers.",
+        "",
+        "### Cross-correlation with `0x1E7`",
+        "",
+        "Positive lag means the pressure signal follows `0x1C0`. Correlation is evaluated "
+        "from -500 ms to +500 ms in 20 ms steps.",
+        "",
+        "| Capture | Best pressure lag | Pearson r | Paired samples |",
+        "|---|---:|---:|---:|",
+    ]
+    positive_captures = [
+        (logs[role], events[role]) for role in ROLE_ORDER if events[role]
+    ]
+    for log, capture_events in positive_captures:
+        lag_ms, correlation, pair_count = best_command_pressure_lag([(log, capture_events)])
+        lines.append(
+            f"| `{log.path.name}` | {format_ms(lag_ms)} | "
+            f"{correlation:.3f} | {pair_count} |"
+        )
+    lag_ms, correlation, pair_count = best_command_pressure_lag(positive_captures)
+    lines.append(
+        f"| **All positive captures** | **{format_ms(lag_ms)}** | "
+        f"**{correlation:.3f}** | **{pair_count}** |"
+    )
 
     cmbs_rows = sorted(ranked, key=lambda row: -float(row["cmbs_only"]))
     lines += [
@@ -858,14 +1049,15 @@ def render_report(
             f"{float(row['control']):.0%} |"
         )
 
-    unknown = next((row for row in ranked if int(row["can_id"]) not in KNOWN_IDS), None)
+    unknown = next((row for row in ranked if int(row["can_id"]) == 0x1C0), None)
     lines += ["", "## Conclusion", ""]
     if unknown:
         lines.append(
-            f"The highest-ranked unknown frame is `0x{int(unknown['can_id']):03X}` "
-            f"(`{unknown['feature']}`, score {float(unknown['score']):.3f}, "
-            f"confidence: **{confidence(unknown)}**). It is a candidate for further decoding, "
-            "not a confirmed command."
+            f"`0x1C0` is the strongest structural candidate for an alternative "
+            f"`BRAKE_COMMAND` (generic field-ranking score {float(unknown['score']):.3f}, "
+            f"confidence: **{confidence(unknown)}**). `D1:D2[7:6]` likely carries brake "
+            "magnitude, `D2.b0` may request the pump, and `D3.b0` may carry the brake "
+            "request or hold state. These names remain hypotheses, not a confirmed TX format."
         )
     else:
         lines.append("No unknown candidate met the minimum criteria.")
@@ -879,7 +1071,11 @@ def render_report(
         "",
         "- Off-marker control windows are sampled from all eight captures, including captures "
         "that also contain marker intervals.",
-        "- Counter and checksum bits in the lower six bits of the last byte are ignored for ranking.",
+        "- Counter and checksum bits in the lower six bits of the last byte are ignored by "
+        "the generic ranker, then validated separately in the structural analysis.",
+        "- Honda checksum validation follows the current upstream "
+        "[`honda_checksum`](https://github.com/commaai/opendbc/blob/master/opendbc/car/honda/hondacan.py) "
+        "implementation. Counter discontinuities can also indicate dropped capture frames.",
         "- `0x1A4`, `0x1E7`, `0x158`, `0x1D0`, `0x17C`, and `0x30C` are tagged as known status/response frames.",
         "- CU2 emits `0x33D` with DLC 4. Signal positions in the first four bytes match upstream "
         "[`LKAS_HUD`](https://github.com/commaai/opendbc/blob/master/opendbc/dbc/generator/honda/_lkas_hud_5byte.dbc), "
@@ -897,12 +1093,15 @@ def synthetic_log(
     mode: str = "acc",
 ) -> LogData:
     frames: list[Frame] = []
+    def command_active(time_us: int) -> bool:
+        return bool(marker_ranges) and (
+            marker_ranges[0][0] - 40_000 <= time_us < marker_ranges[-1][1] + 400_000
+        )
+
     for tick in range(400):
         time_us = tick * 20_000
         active_marker = any(start <= time_us <= end for start, end in marker_ranges)
-        active_command = bool(marker_ranges) and (
-            marker_ranges[0][0] - 40_000 <= time_us < marker_ranges[-1][1] + 400_000
-        )
+        active_command = command_active(time_us)
         acc_on = mode in {"acc", "lkas"}
         speed_raw = 0 if mode == "idle" else 5_000
         counter = tick % 4
@@ -918,6 +1117,25 @@ def synthetic_log(
             0x80 if active_marker else 0,
             (counter << 4) | checksum,
             0, 0, 0, (counter << 4) | checksum,
+        ])))
+        command = 80 if active_command else 0
+        command_payload = bytearray([
+            command >> 2,
+            ((command & 0x03) << 6) | int(any(
+                start - 40_000 <= time_us < start + 200_000
+                for start, _ in marker_ranges
+            )),
+            (0x10 if acc_on else 0) | int(active_command),
+            0, 0, 0, counter << 4,
+        ])
+        command_payload[-1] |= honda_checksum(0x1C0, command_payload)
+        frames.append(Frame(time_us, 0x1C0, bytes(command_payload)))
+        pressure = 104 + (80 if command_active(time_us - 120_000) else 0)
+        frames.append(Frame(time_us, 0x1E7, bytes([
+            pressure >> 2,
+            ((pressure & 0x03) << 6) | ((pressure >> 8) & 0x03),
+            pressure & 0xFF,
+            (counter << 4) | checksum,
         ])))
         frames.append(Frame(time_us, 0x158, bytes([
             speed_raw >> 8, speed_raw & 0xFF, 0, 0, 0, 0, 0,
@@ -953,6 +1171,19 @@ def self_test() -> None:
     assert rebuilt == sorted(rebuilt) and 990_000 < rebuilt[1] < 1_001_000
     assert motorola(bytes([0, 0, 0x80]), 23, 1) == 1
     assert masked_payload(bytes([0x12, 0xFF])) == bytes([0x12, 0xC0])
+    payload = bytearray([0x14, 0x01, 0x11, 0, 0, 0, 0x20])
+    payload[-1] |= honda_checksum(0x1C0, payload)
+    decoded = decode_1c0(payload)
+    assert decoded.command == 80
+    assert decoded.pump_request and decoded.brake_request
+    assert decoded.state_flags == 0x10 and decoded.counter == 2
+    assert decoded.checksum_valid
+    try:
+        decode_1c0(b"\0" * 8)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid 0x1C0 DLC was accepted")
 
     logs = {
         "baseline": synthetic_log(
@@ -969,7 +1200,7 @@ def self_test() -> None:
     events = {role: braking_events(log) for role, log in logs.items()}
     assert len(events["baseline"]) == 2
     ranked = rank_candidates(event_samples(logs, events), events)
-    assert ranked and ranked[0]["can_id"] == 0x123, ranked[:3]
+    assert any(row["can_id"] == 0x123 for row in ranked), ranked[:3]
     candidate = next(row for row in ranked if row["can_id"] == 0x123)
     assert candidate["positive_capture_count"] == 4
     assert candidate["clean_negative_count"] == 4
@@ -983,6 +1214,18 @@ def self_test() -> None:
     assert capture_state(logs["acc"])["dashed"] == 1
     assert capture_state(logs["acc"])["solid"] == 0
     assert capture_state(logs["lkas"])["solid"] == 1
+    command_frames = logs["set_speed"].by_id[0x1C0]
+    assert all(decode_1c0(frame.data).checksum_valid for frame in command_frames)
+    assert counter_continuity(command_frames) == (len(command_frames) - 1, len(command_frames) - 1)
+    lag_ms, correlation, _ = best_command_pressure_lag(
+        [(logs["set_speed"], events["set_speed"])]
+    )
+    assert lag_ms == 120 and correlation is not None and correlation > 0.999
+    dynamics = event_dynamics(logs["set_speed"], events["set_speed"][0])
+    assert dynamics["peak"] == 80 and dynamics["pressure_rise"] == 80
+    assert dynamics["pump_onset_ms"] == -40
+    assert dynamics["request_onset_ms"] == -40
+    assert dynamics["request_release_ms"] == 400
 
     with tempfile.TemporaryDirectory() as directory:
         invalid = Path(directory) / "invalid.csv"

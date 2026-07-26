@@ -27,6 +27,9 @@ The analyzer infers each capture's dominant ACC/LKAS state from CAN data.
 Candidate scoring is aggregated per capture, so a CSV contributes at most one
 vote even when `COMPUTER_BRAKING` contains several intervals. Those intervals
 are controller states and are not interpreted as separate physical maneuvers.
+The report also decodes `0x1C0` as a complete candidate brake-command structure,
+validates its Honda checksum and counter, and compares its command ramp with
+`0x1E7` brake pressure.
 
 The report identifies candidates for further reverse engineering. It does not
 establish that any frame is safe to transmit and must not be used as the basis

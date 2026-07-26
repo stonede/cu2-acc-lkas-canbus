@@ -101,7 +101,7 @@ Each CSV contributes at most one consistency vote, regardless of how many marker
 
 | # | ID / field | Known role | Score | Confidence | Positive captures | Clean negatives | Onset | Release | Control false positives | Payload before → during → after |
 |---:|---|---|---:|---|---:|---:|---:|---:|---:|---|
-| 1 | `0x1C0` `D3.b0` | unknown | 0.988 | high | 4/4 | 4/4 | -24 ms | +477 ms | 0% | `00 00 00 00 00 00 38 → 04 01 11 00 00 00 22 → 00 00 01 00 00 00 28` |
+| 1 | `0x1C0` `D1` | unknown | 0.989 | high | 4/4 | 4/4 | -24 ms | +13 ms | 0% | `00 00 00 00 00 00 38 → 04 01 11 00 00 00 22 → 00 00 01 00 00 00 28` |
 | 2 | `0x1DC` `D3.b2` | unknown | 0.822 | hypothesis | 3/4 | 0/4 | -38 ms | +53 ms | 28% | `02 09 60 1C → 02 06 8E 00 → 02 04 8F 01` |
 | 3 | `0x13F` `D2` | unknown | 0.819 | hypothesis | 4/4 | 0/4 | -240 ms | +6 ms | 31% | `03 06 03 05 00 28 00 28 → 00 85 00 8A FF 4C 00 08 → 01 26 01 3C 00 32 00 07` |
 | 4 | `0x136` `D5.b1` | unknown | 0.727 | hypothesis | 4/4 | 1/4 | -492 ms | +386 ms | 11% | `00 00 00 31 22 00 00 24 → 00 00 00 0C 00 00 00 02 → 00 00 00 0D 02 00 00 0F` |
@@ -122,21 +122,74 @@ Each CSV contributes at most one consistency vote, regardless of how many marker
 | 19 | `0x17C` `D4.b5` | POWERTRAIN_DATA / ACC and pedal state | 0.556 | hypothesis | 3/4 | 0/4 | -51 ms | +14 ms | 13% | `00 00 09 60 48 00 00 27 → 00 00 06 8E 48 00 00 0C → 00 00 04 8F 48 00 00 0D` |
 | 20 | `0x3D7` `D1:D2` | unknown | 0.450 | hypothesis | 1/4 | 4/4 | -303 ms | +178 ms | 25% | `B0 C1 04 00 00 00 00 05 → B0 C1 04 00 00 00 00 05 → B0 00 00 00 00 00 00 7F` |
 
-## Focused evidence: `0x1C0 D3.b0`
+## Structural analysis of `0x1C0`
 
-| Positive capture | Marker intervals | Matching intervals | Median onset | Median release | Candidate active runs |
-|---|---:|---:|---:|---:|---|
-| `bra.csv` | 1 | 1 | -22 ms | +478 ms | 65.734–72.334 s |
-| `bra2.csv` | 3 | 3 | -26 ms | +475 ms | 36.188–42.189 s, 70.389–76.229 s, 88.489–92.709 s |
-| `brk_full.csv` | 2 | 2 | -29 ms | +471 ms | 3.453–7.673 s, 12.233–20.054 s |
-| `cmb.csv` | 2 | 2 | -16 ms | +484 ms | 8.104–12.703 s, 16.104–20.023 s |
+`0x1C0` is analyzed here as one seven-byte message, not as unrelated ranked fields. Its first three candidate fields occupy the same positions as the standard Honda Nidec [`BRAKE_COMMAND`](https://github.com/commaai/opendbc/blob/master/opendbc/dbc/generator/honda/_nidec_common.dbc):
 
-| Negative capture | Candidate active fraction | COMPUTER_BRAKING active fraction |
-|---|---:|---:|
-| `idle.csv` | 0.00% | 0.00% |
-| `reg.csv` | 0.00% | 0.00% |
-| `acc.csv` | 0.00% | 0.00% |
-| `lkas.csv` | 0.00% | 0.00% |
+```text
+command       = (D1 << 2) | (D2 >> 6)
+pump_request  = D2.b0
+brake_request = D3.b0
+state_flags   = D3 & 0xFE
+counter       = D7[5:4]
+checksum      = D7[3:0]
+```
+
+Names remain provisional; positional similarity and correlation do not prove that the message is safe to transmit.
+
+| Capture | Frames | DLC | Command range | Pump active | Brake request active | D3 state values | D4–D6 nonzero | Checksum pass | Counter continuity |
+|---|---:|---|---|---:|---:|---|---:|---:|---:|
+| `bra.csv` | 5767 | [7] | 0–80 | 1.04% | 5.74% | 0x00, 0x10 | 0 | 5767/5767 (100.00%) | 5766/5766 (100.00%) |
+| `bra2.csv` | 5276 | [7] | 0–116 | 3.89% | 15.28% | 0x00, 0x10, 0x30, 0x40, 0x70, 0x80, 0x90 | 0 | 5276/5276 (100.00%) | 5275/5275 (100.00%) |
+| `brk_full.csv` | 1285 | [7] | 0–92 | 29.96% | 47.00% | 0x00, 0x10, 0x30, 0x40, 0x70, 0xC0 | 0 | 1285/1285 (100.00%) | 1284/1284 (100.00%) |
+| `cmb.csv` | 1187 | [7] | 0–128 | 18.11% | 36.06% | 0x10, 0x30, 0x40, 0x70, 0x90, 0xC0 | 0 | 1187/1187 (100.00%) | 1186/1186 (100.00%) |
+| `idle.csv` | 2900 | [7] | 0–0 | 0.00% | 0.00% | 0x00 | 0 | 2900/2900 (100.00%) | 2898/2899 (99.97%) |
+| `reg.csv` | 2190 | [7] | 0–0 | 0.00% | 0.00% | 0x00 | 0 | 2190/2190 (100.00%) | 2187/2189 (99.91%) |
+| `acc.csv` | 3223 | [7] | 0–0 | 0.00% | 0.00% | 0x10, 0x40, 0x70, 0xC0 | 0 | 3223/3223 (100.00%) | 3220/3222 (99.94%) |
+| `lkas.csv` | 3515 | [7] | 0–0 | 0.00% | 0.00% | 0x10 | 0 | 3515/3515 (100.00%) | 3512/3514 (99.94%) |
+
+### Remaining D3 flags
+
+Active fraction of each D3 state bit after excluding `D3.b0`:
+
+| Flag | `bra.csv` | `bra2.csv` | `brk_full.csv` | `cmb.csv` | `idle.csv` | `reg.csv` | `acc.csv` | `lkas.csv` |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `D3.b7` | 0.00% | 0.28% | 0.39% | 0.84% | 0.00% | 0.00% | 0.16% | 0.00% |
+| `D3.b6` | 0.00% | 7.20% | 19.77% | 22.58% | 0.00% | 0.00% | 10.64% | 0.00% |
+| `D3.b5` | 0.00% | 1.14% | 3.11% | 3.37% | 0.00% | 0.00% | 0.47% | 0.00% |
+| `D3.b4` | 5.03% | 18.29% | 72.84% | 78.69% | 0.00% | 0.00% | 89.82% | 100.00% |
+| `D3.b3` | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% |
+| `D3.b2` | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% |
+| `D3.b1` | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% | 0.00% |
+
+### Command ramp and pressure response
+
+Ramp-up is measured from the first 5% command crossing to the first maximum; ramp-down runs from that maximum until the command returns below the same threshold.
+
+| Capture / interval | Command baseline → max | Ramp-up | Ramp-down | Pump onset | Brake request onset → release | 0x1E7 baseline → max (rise) | Peak pressure lag |
+|---|---|---:|---:|---:|---|---|---:|
+| `bra.csv` #1 | 0 → 80 (D1 max 20) | +799 ms | +5340 ms | -22 ms | -22 ms → +478 ms | 104 → 154 (+50) | +403 ms |
+| `bra2.csv` #1 | 0 → 80 (D1 max 20) | +1000 ms | +4541 ms | — | -26 ms → +474 ms | 104 → 155 (+51) | -92 ms |
+| `bra2.csv` #2 | 0 → 116 (D1 max 29) | +1200 ms | +4160 ms | -26 ms | -26 ms → +475 ms | 104 → 181 (+77) | +127 ms |
+| `bra2.csv` #3 | 0 → 84 (D1 max 21) | +900 ms | +2820 ms | -24 ms | -24 ms → +477 ms | 104 → 157 (+53) | +505 ms |
+| `brk_full.csv` #1 | 0 → 64 (D1 max 16) | +1401 ms | +2359 ms | -29 ms | -29 ms → +470 ms | 104 → 143 (+39) | -329 ms |
+| `brk_full.csv` #2 | 0 → 92 (D1 max 23) | +4599 ms | +2721 ms | -29 ms | -29 ms → +471 ms | 104 → 163 (+59) | +1212 ms |
+| `cmb.csv` #1 | 0 → 64 (D1 max 16) | +1901 ms | +2239 ms | — | -16 ms → +484 ms | 104 → 142 (+38) | -1023 ms |
+| `cmb.csv` #2 | 0 → 128 (D1 max 32) | +1499 ms | +1921 ms | -16 ms | -16 ms → +484 ms | 104 → 182 (+78) | -101 ms |
+
+Across these 8 CAN-state intervals, Pearson correlation between maximum command and maximum pressure rise is **0.991**. Intervals are not assumed to be independent physical maneuvers.
+
+### Cross-correlation with `0x1E7`
+
+Positive lag means the pressure signal follows `0x1C0`. Correlation is evaluated from -500 ms to +500 ms in 20 ms steps.
+
+| Capture | Best pressure lag | Pearson r | Paired samples |
+|---|---:|---:|---:|
+| `bra.csv` | +120 ms | 0.988 | 371 |
+| `bra2.csv` | +100 ms | 0.989 | 926 |
+| `brk_full.csv` | +100 ms | 0.981 | 684 |
+| `cmb.csv` | +160 ms | 0.982 | 508 |
+| **All positive captures** | **+120 ms** | **0.986** | **2489** |
 
 ## CMBS-specific changes
 
@@ -152,19 +205,20 @@ These fields may represent AEB/CMBS status rather than a pressure command.
 | `0x324` `D6.b2` | 0.255 | 0.716 | 3/4 | 24% |
 | `0x1DC` `D3.b2` | 0.241 | 0.822 | 3/4 | 28% |
 | `0x309` `D2` | 0.192 | 0.657 | 3/4 | 42% |
-| `0x1C0` `D3.b0` | 0.000 | 0.988 | 4/4 | 0% |
+| `0x1C0` `D1` | 0.000 | 0.989 | 4/4 | 0% |
 | `0x13F` `D2` | 0.000 | 0.819 | 4/4 | 31% |
 
 ## Conclusion
 
-The highest-ranked unknown frame is `0x1C0` (`D3.b0`, score 0.988, confidence: **high**). It is a candidate for further decoding, not a confirmed command.
+`0x1C0` is the strongest structural candidate for an alternative `BRAKE_COMMAND` (generic field-ranking score 0.989, confidence: **high**). `D1:D2[7:6]` likely carries brake magnitude, `D2.b0` may request the pump, and `D3.b0` may carry the brake request or hold state. These names remain hypotheses, not a confirmed TX format.
 
 Physical maneuver count is intentionally left unknown. Confirmation still requires separate annotated captures with repeatable onset timing; do not transmit candidate frames on public roads.
 
 ## Method and limitations
 
 - Off-marker control windows are sampled from all eight captures, including captures that also contain marker intervals.
-- Counter and checksum bits in the lower six bits of the last byte are ignored for ranking.
+- Counter and checksum bits in the lower six bits of the last byte are ignored by the generic ranker, then validated separately in the structural analysis.
+- Honda checksum validation follows the current upstream [`honda_checksum`](https://github.com/commaai/opendbc/blob/master/opendbc/car/honda/hondacan.py) implementation. Counter discontinuities can also indicate dropped capture frames.
 - `0x1A4`, `0x1E7`, `0x158`, `0x1D0`, `0x17C`, and `0x30C` are tagged as known status/response frames.
 - CU2 emits `0x33D` with DLC 4. Signal positions in the first four bytes match upstream [`LKAS_HUD`](https://github.com/commaai/opendbc/blob/master/opendbc/dbc/generator/honda/_lkas_hud_5byte.dbc), which defines a five-byte message.
 - Zero timestamps are interpolated and the microsecond field is unwrapped once per second.
