@@ -126,6 +126,8 @@ Each CSV contributes at most one consistency vote, regardless of how many marker
 
 `0x1C0` is analyzed here as one seven-byte message, not as unrelated ranked fields. Its first three candidate fields occupy the same positions as the standard Honda Nidec [`BRAKE_COMMAND`](https://github.com/commaai/opendbc/blob/master/opendbc/dbc/generator/honda/_nidec_common.dbc):
 
+The supplied related-Accord [`2013_CU_honda_accord.dbc`](2013_CU_honda_accord.dbc) independently maps the same three positions. Its exact lineage and the version shown in the external Cabana screenshot remain unresolved.
+
 ```text
 command       = (D1 << 2) | (D2 >> 6)
 pump_request  = D2.b0

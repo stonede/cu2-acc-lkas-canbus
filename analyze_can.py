@@ -916,6 +916,10 @@ def render_report(
         "Honda Nidec [`BRAKE_COMMAND`](https://github.com/commaai/opendbc/blob/master/"
         "opendbc/dbc/generator/honda/_nidec_common.dbc):",
         "",
+        "The supplied related-Accord [`2013_CU_honda_accord.dbc`](2013_CU_honda_accord.dbc) "
+        "independently maps the same three positions. Its exact lineage and the version shown "
+        "in the external Cabana screenshot remain unresolved.",
+        "",
         "```text",
         "command       = (D1 << 2) | (D2 >> 6)",
         "pump_request  = D2.b0",
@@ -1166,6 +1170,14 @@ def synthetic_log(
 
 
 def self_test() -> None:
+    dbc = Path(__file__).with_name("2013_CU_honda_accord.dbc").read_text(encoding="utf-8")
+    assert "BO_ 448 BRAKE_COMMAND: 7 ADAS" in dbc
+    assert "SG_ COMPUTER_BRAKE : 7|10@0+ (1,0) [0|1023]" in dbc
+    assert "BO_ 487 BRAKE_PRESSURE: 4 VSA" in dbc
+    assert "BO_ 346 STEER_STATUS_1: 8 EPS" in dbc and "BO_ 399 STEER_STATUS" not in dbc
+    assert "BO_ 773 SEATBELT_STATUS_SHORT: 2 BDY" in dbc
+    assert "diagnostic" not in dbc.lower()
+
     rebuilt, wraps, anomalies = rebuild_timestamps([990_000, 0, 1_000, 2_000])
     assert wraps == 1 and anomalies == 0
     assert rebuilt == sorted(rebuilt) and 990_000 < rebuilt[1] < 1_001_000

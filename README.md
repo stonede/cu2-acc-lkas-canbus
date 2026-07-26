@@ -31,6 +31,10 @@ The report also decodes `0x1C0` as a complete candidate brake-command structure,
 validates its Honda checksum and counter, and compares its command ramp with
 `0x1E7` brake pressure.
 
+`2013_CU_honda_accord.dbc` covers every ID in the eight captures. Its comments
+label CU2-confirmed, related-Accord, inherited-Nidec, and unresolved evidence;
+unknown cyclic messages are intentionally not described as diagnostic traffic.
+
 The report identifies candidates for further reverse engineering. It does not
 establish that any frame is safe to transmit and must not be used as the basis
 for transmitting candidate frames on public roads.

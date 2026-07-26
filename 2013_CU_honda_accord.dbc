@@ -33,11 +33,17 @@ BS_ :
 BU_ : ADAS BDY CAM EBCM EON EPS PCM SCM VSA XXX
 
 BO_ 57 UNKNOWN_039: 2 XXX
+ SG_ CHECKSUM : 11|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 13|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 145 KINEMATICS_ALT: 8 XXX
  SG_ LAT_ACCEL : 7|10@0+ (0.02,-512) [-20|20] "m/s2" EON
  SG_ CHECKSUM : 59|4@0+ (1,0) [0|3] "" EON
  SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" EON
+
+BO_ 151 UNKNOWN_097: 8 XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 228 STEERING_CONTROL: 5 ADAS
  SG_ STEER_TORQUE : 7|16@0- (1,0) [-3840|3840] "" EPS
@@ -49,10 +55,18 @@ BO_ 228 STEERING_CONTROL: 5 ADAS
 
 BO_ 310 NEW_MSG_136: 8 XXX
 
+BO_ 314 UNKNOWN_13A: 8 XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" XXX
+
 BO_ 316 GAS_PEDAL: 8 PCM
  SG_ CAR_GAS : 39|8@0+ (1,0) [0|255] "" EON
  SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" EON
  SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" EON
+
+BO_ 319 UNKNOWN_13F: 8 XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 342 STEERING_SENSORS: 6 EPS
  SG_ STEER_ANGLE : 7|16@0- (-0.1,0) [-500|500] "deg" EON
@@ -65,6 +79,10 @@ BO_ 344 ENGINE_DATA: 8 PCM
  SG_ ENGINE_RPM : 23|16@0+ (1,0) [0|15000] "rpm" EON
  SG_ XMISSION_SPEED2 : 39|16@0+ (0.01,0) [0|250] "kph" EON
  SG_ ODOMETER : 55|8@0+ (10,0) [0|2550] "m" XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" EON
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" EON
+
+BO_ 346 STEER_STATUS_1: 8 EPS
  SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" EON
  SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" EON
 
@@ -90,15 +108,8 @@ BO_ 392 GEARBOX_AUTO: 6 XXX
  SG_ COUNTER : 45|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 398 UNKNOWN_18E: 3 XXX
-
-BO_ 399 STEER_STATUS: 7 EPS
- SG_ STEER_TORQUE_SENSOR : 7|16@0- (-1,0) [-31000|31000] "tbd" EON
- SG_ STEER_ANGLE_RATE : 23|16@0- (-0.1,0) [-31000|31000] "deg/s" EON
- SG_ STEER_CONTROL_ACTIVE : 35|1@0+ (1,0) [0|1] "" EON
- SG_ STEER_STATUS : 39|4@0+ (1,0) [0|15] "" EON
- SG_ STEER_CONFIG_INDEX : 43|4@0+ (1,0) [0|15] "" EON
- SG_ CHECKSUM : 51|4@0+ (1,0) [0|3] "" EON
- SG_ COUNTER : 53|2@0+ (1,0) [0|3] "" EON
+ SG_ CHECKSUM : 19|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 21|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 420 VSA_STATUS: 8 VSA
  SG_ USER_BRAKE : 7|16@0+ (0.015625,-1.609375) [0|1000] "" EON
@@ -125,6 +136,8 @@ BO_ 422 SCM_BUTTONS: 8 SCM
  SG_ DRIVERS_DOOR_OPEN : 63|1@0+ (1,0) [0|1] "" EON
 
 BO_ 426 UNKNOWN_1AA: 8 XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 427 STEER_MOTOR_TORQUE: 3 EPS
  SG_ MOTOR_TORQUE : 1|10@0+ (1,0) [0|256] "" EON
@@ -141,28 +154,13 @@ BO_ 432 STANDSTILL: 7 VSA
  SG_ CHECKSUM : 51|4@0+ (1,0) [0|3] "" EON
  SG_ COUNTER : 53|2@0+ (1,0) [0|3] "" EON
 
-BO_ 448 BRAKE_COMMAND: 7 XXX
- SG_ COMPUTER_BRAKE : 7|10@0+ (1,0) [0|1] "" EBCM
+BO_ 448 BRAKE_COMMAND: 7 ADAS
+ SG_ COMPUTER_BRAKE : 7|10@0+ (1,0) [0|1023] "" EBCM
  SG_ BRAKE_PUMP_REQUEST : 8|1@0+ (1,0) [0|1] "" EBCM
- SG_ BRAKE_PUMP_REQUEST_HYBRID : 11|1@0+ (1,0) [0|1] "" EBCM
- SG_ CMBS_DISABLED : 12|1@0+ (1,0) [0|1] "" XXX
+ SG_ D2_STATE_FLAGS : 13|5@0+ (1,0) [0|31] "" XXX
  SG_ COMPUTER_BRAKE_REQUEST : 16|1@0+ (1,0) [0|1] "" EBCM
- SG_ CRUISE_CANCEL_CMD : 17|1@0+ (1,0) [0|1] "" EBCM
- SG_ CRUISE_FAULT_CMD : 18|1@0+ (1,0) [0|1] "" EBCM
- SG_ SET_ME_X00_2 : 19|1@0+ (1,0) [0|1] "" EBCM
- SG_ CRUISE_OVERRIDE : 20|1@0+ (1,0) [0|1] "" EBCM
- SG_ ACC_OVERRIDE_STOP : 21|1@0+ (1,0) [0|1] "" EBCM
- SG_ SET_ME_0 : 22|1@0+ (1,0) [0|1] "" EBCM
- SG_ ACC_LAST_BIT : 23|1@0+ (1,0) [0|1] "" EBCM
- SG_ AEB_REQ_2 : 26|3@0+ (1,0) [0|7] "" XXX
- SG_ AEB_REQ_1 : 29|2@0+ (1,0) [0|1] "" XXX
- SG_ IMPERIAL_UNIT : 31|1@0+ (1,0) [0|1] "" EBCM
- SG_ CRUISE_STATES : 38|7@0+ (1,0) [0|1] "" EBCM
- SG_ BRAKE_LIGHTS : 39|1@0+ (1,0) [0|1] "" EBCM
- SG_ AEB_STATUS : 41|2@0+ (1,0) [0|3] "" XXX
- SG_ FCW : 43|2@0+ (1,0) [0|3] "" EBCM
- SG_ SET_ME_X00_3 : 44|1@0+ (1,0) [0|1] "" EBCM
- SG_ CHIME : 47|3@0+ (1,0) [0|7] "" EBCM
+ SG_ D3_STATE_FLAGS : 23|7@0+ (1,0) [0|127] "" XXX
+ SG_ RESERVED_ZERO_D4_D6 : 31|24@0+ (1,0) [0|16777215] "" XXX
  SG_ CHECKSUM : 51|4@0+ (1,0) [0|15] "" EBCM
  SG_ COUNTER : 53|2@0+ (1,0) [0|3] "" EBCM
 
@@ -174,6 +172,14 @@ BO_ 464 WHEEL_SPEEDS: 8 VSA
  SG_ CHECKSUM : 59|4@0+ (1,0) [0|3] "" EON
 
 BO_ 476 UNKNOWN_1DC: 4 XXX
+ SG_ CHECKSUM : 27|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 29|2@0+ (1,0) [0|3] "" XXX
+
+BO_ 487 BRAKE_PRESSURE: 4 VSA
+ SG_ BRAKE_PRESSURE1_RAW : 7|10@0+ (1,0) [0|1023] "" EON
+ SG_ BRAKE_PRESSURE2_RAW : 9|10@0+ (1,0) [0|1023] "" EON
+ SG_ CHECKSUM : 27|4@0+ (1,0) [0|15] "" EON
+ SG_ COUNTER : 29|2@0+ (1,0) [0|3] "" EON
 
 BO_ 490 VEHICLE_DYNAMICS: 8 VSA
  SG_ LAT_ACCEL : 7|16@0- (0.0015,0) [-20|20] "m/s2" EON
@@ -188,16 +194,10 @@ BO_ 660 SCM_FEEDBACK: 8 SCM
  SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" EON
  SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" EON
 
-BO_ 773 SEATBELT_STATUS: 7 BDY
- SG_ SEATBELT_DRIVER_LAMP : 7|1@0+ (1,0) [0|1] "" EON
- SG_ SEATBELT_PASS_UNLATCHED : 10|1@0+ (1,0) [0|1] "" EON
- SG_ SEATBELT_PASS_LATCHED : 11|1@0+ (1,0) [0|1] "" EON
- SG_ SEATBELT_DRIVER_UNLATCHED : 12|1@0+ (1,0) [0|1] "" EON
- SG_ SEATBELT_DRIVER_LATCHED : 13|1@0+ (1,0) [0|1] "" EON
- SG_ PASS_AIRBAG_OFF : 14|1@0+ (1,0) [0|1] "" EON
- SG_ PASS_AIRBAG_ON : 15|1@0+ (1,0) [0|1] "" EON
- SG_ CHECKSUM : 51|4@0+ (1,0) [0|3] "" EON
- SG_ COUNTER : 53|2@0+ (1,0) [0|3] "" EON
+BO_ 773 SEATBELT_STATUS_SHORT: 2 BDY
+ SG_ STATUS_RAW : 7|8@0+ (1,0) [0|255] "" EON
+ SG_ CHECKSUM : 11|4@0+ (1,0) [0|15] "" EON
+ SG_ COUNTER : 13|2@0+ (1,0) [0|3] "" EON
 
 BO_ 777 CAR_SPEED: 8 PCM
  SG_ CAR_SPEED : 7|16@0+ (0.01,0) [0|65535] "kph" XXX
@@ -237,6 +237,8 @@ BO_ 780 ACC_HUD: 8 ADAS
  SG_ ICONS : 63|2@0+ (1,0) [0|3] "" BDY
 
 BO_ 800 UNKNOWN_320: 3 XXX
+ SG_ CHECKSUM : 19|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 21|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 804 CRUISE: 8 PCM
  SG_ HUD_SPEED_KPH : 7|8@0+ (1,0) [0|255] "kph" EON
@@ -274,14 +276,26 @@ BO_ 884 STALK_STATUS: 7 XXX
  SG_ COUNTER : 53|2@0+ (1,0) [0|3] "" EON
  SG_ HEADLIGHTS_ON : 54|1@0+ (1,0) [0|1] "" EON
 
+BO_ 887 UNKNOWN_377: 8 XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" XXX
+
+BO_ 888 UNKNOWN_378: 8 XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" XXX
+
 BO_ 892 CRUISE_PARAMS: 8 PCM
  SG_ CRUISE_SPEED_OFFSET : 31|8@0- (0.1,0) [-128|127] "kph" EON
  SG_ CHECKSUM : 59|4@0+ (1,0) [0|3] "" EON
  SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" EON
 
 BO_ 983 UNKNOWN_3D7: 8 XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 1024 UNKNOWN_400: 5 XXX
+ SG_ CHECKSUM : 35|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 37|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 1029 DOORS_STATUS: 8 BDY
  SG_ DOOR_OPEN_FL : 37|1@0+ (1,0) [0|1] "" EON
@@ -293,26 +307,58 @@ BO_ 1029 DOORS_STATUS: 8 BDY
  SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" EON
 
 BO_ 1030 UNKNOWN_406: 5 XXX
+ SG_ CHECKSUM : 35|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 37|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 1036 UNKNOWN_40C: 8 XXX
+ SG_ CHECKSUM : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 61|2@0+ (1,0) [0|3] "" XXX
+
+BO_ 1057 UNKNOWN_421: 5 XXX
+ SG_ CHECKSUM : 35|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 37|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 1064 UNKNOWN_428: 7 XXX
+ SG_ CHECKSUM : 51|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 53|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 1108 UNKNOWN_454: 6 XXX
+ SG_ CHECKSUM : 43|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 45|2@0+ (1,0) [0|3] "" XXX
 
 BO_ 1125 UNKNOWN_465: 7 XXX
+ SG_ CHECKSUM : 51|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 53|2@0+ (1,0) [0|3] "" XXX
 
-CM_ BO_ 57 "GUESS/unidentified: dlc 3 varying bytes [1, 2]; likely body/comfort/diagnostic.";
+BO_ 1729 UNKNOWN_6C1: 1 XXX
+ SG_ CHECKSUM : 3|4@0+ (1,0) [0|15] "" XXX
+ SG_ COUNTER : 5|2@0+ (1,0) [0|3] "" XXX
+
+CM_ "Evidence tags: CONFIRMED_FROM_CU2 is observed in the eight repository captures; RELATED_ACCORD_DBC is inherited from another Accord variant; INHERITED_FROM_NIDEC_1FA is positional only; GUESS is correlation-derived and unverified; UNRESOLVED has no assigned semantics.";
+CM_ BO_ 57 "UNRESOLVED cyclic broadcast, DLC 2; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 151 "UNRESOLVED cyclic broadcast, DLC 8; Honda checksum and counter confirmed from CU2.";
 CM_ BO_ 228 "v3 note: OP steering TX (not on sampled non-lateral drives)";
+CM_ BO_ 314 "UNRESOLVED cyclic broadcast, DLC 8; Honda checksum and counter confirmed from CU2.";
 CM_ SG_ 316 CAR_GAS "Should exist on Nidec";
-CM_ BO_ 398 "GUESS/unidentified: dlc 3 varying bytes [1, 2]; likely body/comfort/diagnostic.";
+CM_ BO_ 319 "UNRESOLVED cyclic broadcast, DLC 8; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 346 "CONFIRMED_FROM_CU2: cyclic DLC 8 with valid Honda checksum/counter. RELATED_ACCORD_DBC supplies the STEER_STATUS_1 name; payload signals remain unresolved.";
+CM_ BO_ 398 "UNRESOLVED cyclic broadcast, DLC 3; Honda checksum and counter confirmed from CU2.";
 CM_ SG_ 420 BRAKE_HOLD_RELATED "On when Brake Hold engaged";
-CM_ BO_ 426 "GUESS/unidentified: dlc 8 varying bytes [3, 7]; likely body/comfort/diagnostic.";
+CM_ BO_ 426 "UNRESOLVED cyclic broadcast, DLC 8; Honda checksum and counter confirmed from CU2.";
 CM_ BO_ 427 "v3 note: not seen on sample, verify";
 CM_ BO_ 476 "GUESS: best match vEgo_kph corr 0.58; scale is a fit, verify.";
+CM_ BO_ 448 "CONFIRMED_FROM_CU2: seven-byte 50 Hz brake-command-family message. D4-D6 are zero in all repository captures. Layout matches the first fields of Nidec 0x1FA; TX behavior is not validated.";
+CM_ SG_ 448 COMPUTER_BRAKE "CONFIRMED_FROM_CU2: 10-bit command magnitude; observed 0-128. Technical field range is 0-1023; no CU2 TX safety limit is established.";
+CM_ SG_ 448 BRAKE_PUMP_REQUEST "CONFIRMED_FROM_CU2 with high confidence from timing and the related Accord decoder.";
+CM_ SG_ 448 D2_STATE_FLAGS "UNRESOLVED D2 bits 5:1. Do not inherit hybrid or CMBS meanings without CU2 evidence.";
+CM_ SG_ 448 COMPUTER_BRAKE_REQUEST "CONFIRMED_FROM_CU2 with high confidence; remains active about 0.48 s after the braking marker.";
+CM_ SG_ 448 D3_STATE_FLAGS "UNRESOLVED D3 bits 7:1. D3.b4 tracks ACC state; other semantic names are not established.";
+CM_ SG_ 448 RESERVED_ZERO_D4_D6 "CONFIRMED_FROM_CU2: always zero in all eight captures; related 0x1FA AEB/FCW/chime meanings are not claimed.";
+CM_ BO_ 487 "CONFIRMED_FROM_CU2: DLC 4 at 50 Hz; two raw 10-bit pressure channels, checksum, and counter. Signal scaling is intentionally uncalibrated.";
+CM_ SG_ 487 BRAKE_PRESSURE1_RAW "CONFIRMED_FROM_CU2 raw channel. The upstream Nidec scale/offset produces implausible CU2 values and is not applied.";
+CM_ SG_ 487 BRAKE_PRESSURE2_RAW "CONFIRMED_FROM_CU2 raw channel. The upstream Nidec scale/offset produces implausible CU2 values and is not applied.";
 CM_ SG_ 490 LONG_ACCEL "wheel speed derivative, noisy and zero snapping";
-CM_ SG_ 773 PASS_AIRBAG_OFF "Might just be indicator light";
-CM_ SG_ 773 PASS_AIRBAG_ON "Might just be indicator light";
+CM_ BO_ 773 "CONFIRMED_FROM_CU2: short DLC 2 variant. The related Honda DLC 7 seatbelt signal layout does not apply; STATUS_RAW semantics are unresolved.";
 CM_ BO_ 780 "ACC_HUD, 10Hz, from radar/ACC unit. Same Honda checksum/counter as 506 (verified 100.0000% on 64880 stock frames). Stock never sets ACC_PROBLEM/FCM_*; those appear only when openpilot is active (7.2% duty on 84-8b).";
 CM_ SG_ 780 PCM_SPEED "ACC target speed, 0.01 kph. =0 at standstill (84% of zero-speed frames). v3 max [0|250] was wrong (16-bit*0.01 -> 655.35).";
 CM_ SG_ 780 PCM_GAS "ACC powertrain gas/torque request. Dominant idle value ~198; varies with ACC accel demand. v3 max [0|127] wrong (8-bit -> 255).";
@@ -333,21 +379,24 @@ CM_ SG_ 780 ACC_HUD_STROBE "v4 rename of v3 SET_ME_X01 (bit48). NOT a constant: 
 CM_ SG_ 780 ACC_ON "ACC actively engaged/controlling (engaged 99.9% when 1). Radar's own engaged truth.";
 CM_ SG_ 780 IMPERIAL_UNIT "0 across stock frames on this car.";
 CM_ SG_ 780 SET_ME_X01_2 "Reserved CONSTANT = 1 across all 64880 stock frames. openpilot MUST send 1.";
-CM_ BO_ 800 "GUESS/unidentified: dlc 8 varying bytes [7]; likely body/comfort/diagnostic.";
+CM_ BO_ 800 "UNRESOLVED cyclic broadcast, DLC 3; Honda checksum and counter confirmed from CU2.";
 CM_ SG_ 804 CRUISE_SPEED_PCM "255 = no speed";
 CM_ SG_ 829 CAM_TEMP_HIGH "Some Driver Assist Systems Cannot Operate: Camera Temperature Too High";
 CM_ SG_ 829 BEEP "beeps are pleasant, chimes are for warnings etc...";
-CM_ BO_ 983 "GUESS/unidentified: dlc 8 varying bytes [7]; likely body/comfort/diagnostic.";
-CM_ BO_ 1024 "GUESS/unidentified: dlc 5 varying bytes [2, 4]; likely body/comfort/diagnostic.";
-CM_ BO_ 1030 "GUESS/unidentified: dlc 5 varying bytes [3, 4]; likely body/comfort/diagnostic.";
-CM_ BO_ 1036 "GUESS/unidentified: dlc 8 varying bytes [0, 1, 2, 3, 4, 5, 6, 7]; likely body/comfort/diagnostic.";
-CM_ BO_ 1064 "GUESS/unidentified: dlc 7 varying bytes [6]; likely body/comfort/diagnostic.";
-CM_ BO_ 1108 "GUESS/unidentified: dlc 8 varying bytes [6, 7]; likely body/comfort/diagnostic.";
+CM_ BO_ 887 "UNRESOLVED cyclic broadcast, DLC 8; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 888 "UNRESOLVED cyclic broadcast, DLC 8; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 983 "UNRESOLVED cyclic broadcast, DLC 8; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 1024 "UNRESOLVED cyclic broadcast, DLC 5; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 1030 "UNRESOLVED cyclic broadcast, DLC 5; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 1036 "UNRESOLVED cyclic broadcast, DLC 8; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 1057 "UNRESOLVED cyclic broadcast, DLC 5; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 1064 "UNRESOLVED cyclic broadcast, DLC 7; Honda checksum and counter confirmed from CU2.";
+CM_ BO_ 1108 "UNRESOLVED cyclic broadcast, DLC 6; Honda checksum and counter confirmed from CU2.";
 CM_ BO_ 1125 "GUESS: best match vEgo_kph corr 0.66; scale is a fit, verify.";
+CM_ BO_ 1729 "UNRESOLVED cyclic broadcast, DLC 1; Honda checksum and counter confirmed from CU2.";
 VAL_ 392 AUTO_GEAR_SELECT 7 "6" 6 "R" 0 "P";
 VAL_ 392 GEAR_SHIFTER 0 "S" 1 "P" 2 "R" 4 "N" 8 "D";
 VAL_ 392 GEAR 26 "S" 4 "D" 3 "N" 2 "R" 1 "P";
-VAL_ 399 STEER_STATUS 7 "permanent_fault" 6 "tmp_fault" 5 "fault_1" 4 "no_torque_alert_2" 3 "low_speed_lockout" 2 "no_torque_alert_1" 1 "driver_steering" 0 "normal";
 VAL_ 422 LIGHTS_SETTING 3 "high_beam" 2 "low_beam" 1 "position" 0 "no_lights";
 VAL_ 422 CRUISE_BUTTONS 7 "tbd" 6 "tbd" 5 "tbd" 4 "accel_res" 3 "decel_set" 2 "cancel" 1 "main" 0 "none";
 VAL_ 422 CRUISE_SETTING 3 "distance_adj" 2 "tbd" 1 "lkas_button" 0 "none";
