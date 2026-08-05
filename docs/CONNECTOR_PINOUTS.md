@@ -31,6 +31,14 @@ The machine-readable transcription is stored in
 
 ## ACC/ADAS controller connector — 20 cavities
 
+![ACC/ADAS controller 20-pin connector numbering reference](assets/connectors/acc-adas-20pin-numbering-reference.png)
+
+> **Numbering reference only.** Latch is shown at the top. This drawing was
+> carried over from the reverse-engineering worksheet. It does not yet prove
+> whether the view is from the mating face or the harness/wire side. Confirm the
+> physical connector orientation before fabricating or probing a harness.
+
+
 | Pin | Wire colour | Observed voltage | Working label from worksheet | Current interpretation |
 |---:|---|---:|---|---|
 | 1 | white | 2.7 V | CAN H | **Strongly supported** F-CAN high; confirm by continuity and differential capture |
@@ -55,6 +63,14 @@ The machine-readable transcription is stored in
 | 20 | black | — | ground | **Observed/likely** ground; confirm continuity |
 
 ## LKAS camera/controller connector — 10 cavities
+
+![LKAS camera 10-pin connector numbering reference](assets/connectors/lkas-camera-10pin-numbering-reference.png)
+
+> **Numbering reference only.** Latch is shown at the top. This drawing was
+> carried over from the reverse-engineering worksheet. It does not yet prove
+> whether the view is from the mating face or the harness/wire side. Confirm the
+> physical connector orientation before fabricating or probing a harness.
+
 
 | Pin | Wire colour | Observed voltage | Working label from worksheet | Current interpretation |
 |---:|---|---:|---|---|
