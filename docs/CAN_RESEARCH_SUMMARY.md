@@ -1,76 +1,96 @@
-# Serial steering research
+# CAN research summary
 
-## Why this path matters
+## Dataset
 
-The tested CU2 does not expose the expected openpilot-compatible CAN steering-command frames. OEM lateral control appears to use two independent 12 V single-wire serial channels between the LKAS camera/controller and EPS.
+The current analysis uses eight captures:
 
-A CU2 openpilot port therefore likely needs dedicated serial-steering hardware or a gateway that can reproduce the stock protocol while preserving fail-safe pass-through.
+| File | Scenario |
+|---|---|
+| `idle.csv` | stationary, ACC/LKAS off |
+| `reg.csv` | regular driving, ACC/LKAS off |
+| `acc.csv` | ACC active, no active LKAS steering |
+| `lkas.csv` | ACC and LKAS active |
+| `bra.csv` | mixed capture containing ACC braking |
+| `bra2.csv` | ACC braking after set-speed reductions |
+| `brk_full.csv` | ACC braking behind a lead vehicle |
+| `cmb.csv` | CMBS/AEB activation context |
 
-## Current protocol hypotheses
+The generated report verifies the dominant operating mode from CAN content rather than trusting file names alone.
 
-Based on `reddn/LINInterfaceV2` and `mlocoteta/serialSteeringHardware`:
+## Bus inventory
 
-- 9600 baud;
-- 8 data bits, even parity, 1 stop bit (`8E1`);
-- likely 4-byte LKAS-to-EPS command frames;
-- likely 5-byte EPS-to-LKAS feedback frames;
-- first-byte plausibility rule `(byte >> 4) < 4`;
-- checksum is calculated from preceding bytes, folded into 7 bits and placed in the `0x80–0xFF` range.
+- 40 CAN identifiers appear in each supplied capture.
+- Common observed rates include approximately 100, 50, 25, 10, 5 and 3.3 Hz.
+- `0x1E7` is present and tracks brake pressure/response context.
+- Standard Honda Nidec `0x1FA` is absent from every log.
+- CU2 emits `0x33D` with DLC 4; its first four bytes align with known Honda LKAS HUD layouts that are often represented as five-byte messages elsewhere.
 
-These are reference-derived assumptions, not yet confirmed on this specific car.
+See [`research/can/analysis_report.md`](../research/can/analysis_report.md) for full frequencies and capture integrity data.
 
-## Logger implementation
+## Brake-command candidate
 
-The repository contains a receive-only ESP32 logger in [`firmware/serial-steering/`](../firmware/serial-steering/README.md).
+`0x1C0` is the strongest current candidate for an alternative CU2 `BRAKE_COMMAND`.
 
-Properties:
+Current provisional structure:
 
-- captures both channels concurrently using UART1 and UART2;
-- default RX pins GPIO32 and GPIO33 on classic ESP32-WROOM-32;
-- UART TX pins are deliberately unassigned;
-- TX buffers are disabled;
-- outputs timestamped JSONL over UART0;
-- supports raw, forced 4-byte, forced 5-byte and auto-classification modes;
-- keeps raw bytes authoritative;
-- provides host capture and analysis tools.
+```text
+command       = (D1 << 2) | (D2 >> 6)
+pump_request  = D2.b0
+brake_request = D3.b0
+state_flags   = D3 & 0xFE
+counter       = D7[5:4]
+checksum      = D7[3:0]
+```
 
-The implementation must remain passive until the protocol is independently understood.
+Observed evidence:
 
-## Physical-layer warning
+- seven-byte DLC;
+- 50 Hz transmission;
+- command is zero in all four negative-control captures;
+- command is active in all four positive braking captures;
+- Honda checksum validation passes 100% of frames in the supplied dataset;
+- counter continuity is approximately 99.9–100%, with discontinuities consistent with dropped capture frames;
+- D4–D6 are zero in the current data;
+- magnitude closely follows measured braking response;
+- combined cross-correlation with `0x1E7` peaks around +120 ms with Pearson `r = 0.986`;
+- maximum command versus maximum pressure rise across identified intervals has Pearson correlation `0.991`.
 
-TJA1020/TJA1021-style boards are being used as single-wire physical-layer converters. Their use does not prove the protocol is standard LIN.
+This is strong evidence of function, not proof of a safe transmit format.
 
-Cheap LINTTL3 boards may expose 5 V TTL output. Measure the board output and level-shift to 3.3 V before an ESP32 input when required.
+## Important context messages
 
-## Capture goals
+The current DBC/report uses or references:
 
-For each channel determine:
+- `0x17C` — powertrain, ACC and brake-pedal context;
+- `0x1A4` — `COMPUTER_BRAKING` controller state used to identify intervals;
+- `0x1E7` — brake pressure/response;
+- `0x158` — engine/vehicle-speed context;
+- `0x1D0` — wheel-speed/vehicle response;
+- `0x30C` — ACC HUD/context;
+- `0x33D` — LKAS HUD, CU2 DLC 4.
 
-1. idle level and voltage range;
-2. baud, parity and stop bits;
-3. direction and message ownership;
-4. frame length and inter-frame gap;
-5. checksum validity;
-6. periodicity and timeout;
-7. command/feedback fields;
-8. relationship to steering angle, driver torque and LKAS state;
-9. startup, shutdown and fault sequences.
+Names inherited from other Honda DBCs remain confidence-qualified in the CU2 DBC.
 
-## Suggested synchronized scenarios
+## What is not yet proven
 
-- ignition on, engine off;
-- engine running, vehicle stationary;
-- straight driving with LKAS unavailable;
-- LKAS ready but not actively correcting;
-- left and right lane corrections;
-- driver override at multiple torque levels;
-- lane loss and LKAS disengagement;
-- stock ACC/LKAS fault or module restart, only in a controlled environment.
+- Exact engineering units and saturation for `0x1C0.command`.
+- Exact meaning of `D2.b0`, `D3.b0` and remaining D3 state flags.
+- Node that owns `0x1C0` under all operating modes.
+- Required relationship with VSA, PCM and ACC watchdog messages.
+- Behaviour when frames are missing, delayed, duplicated or counter-invalid.
+- Whether openpilot can safely replace, suppress or coexist with the stock sender.
+- Minimum and maximum controllable deceleration.
 
-Mark every event in the serial log and capture F-CAN at the same time.
+## Required follow-up captures
 
-## Active interface requirements
+Use separate, annotated runs for:
 
-Any later active board should default to hardware pass-through without software. A reset, brownout, watchdog event or unplugged controller must not leave the stock LKAS-to-EPS path interrupted or driven to an unsafe level.
+- repeated small ACC decelerations;
+- repeated large ACC decelerations;
+- set-speed changes without a lead vehicle;
+- lead-vehicle following at multiple gaps;
+- CMBS warning without braking, if safely reproducible;
+- manual brake pedal only;
+- module unplug/fault tests on a bench or controlled setup.
 
-The community-reported DoRaN V1 approach uses fail-safe pass-through and is a useful design reference, but its exact circuit and behaviour still need to be captured in this repository before being treated as canonical.
+Do not combine unrelated manoeuvres when a clean single-purpose capture is possible.

@@ -14,6 +14,7 @@ firmware/
   serial-steering/           ESP32 receive-only LKAS↔EPS serial logger
 research/
   can/                       CAN captures, DBC and brake-command analysis
+  pinouts/                   Machine-readable connector measurements
 ```
 
 Each implementation directory is self-contained and has its own README, commands and data. Project-wide conclusions belong in `docs/`; implementation details stay beside the relevant code.
@@ -25,6 +26,7 @@ For future additions, keep device code in `firmware/<device>/`, measurements and
 - [Project knowledge base](docs/README.md)
 - [Serial steering logger](firmware/serial-steering/README.md)
 - [CAN research](research/can/README.md)
+- [Connector pinout research](research/pinouts/README.md)
 
 ## Safety
 

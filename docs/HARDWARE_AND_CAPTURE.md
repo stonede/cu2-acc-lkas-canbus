@@ -1,96 +1,78 @@
-# CAN research summary
+# Hardware and capture
 
-## Dataset
+## Available hardware
 
-The current analysis uses eight captures:
+- Two custom straight-through T-harnesses: camera and ACC-unit locations.
+- CANable v2.0 Pro for passive CAN capture.
+- ESP32 development board.
+- Two LINTTL3-style TJA1020/TJA1021 single-wire physical-layer converter modules.
+- Multimeter (UT61E+).
+- Windows host with SavvyCAN and Python tooling.
 
-| File | Scenario |
-|---|---|
-| `idle.csv` | stationary, ACC/LKAS off |
-| `reg.csv` | regular driving, ACC/LKAS off |
-| `acc.csv` | ACC active, no active LKAS steering |
-| `lkas.csv` | ACC and LKAS active |
-| `bra.csv` | mixed capture containing ACC braking |
-| `bra2.csv` | ACC braking after set-speed reductions |
-| `brk_full.csv` | ACC braking behind a lead vehicle |
-| `cmb.csv` | CMBS/AEB activation context |
+## Connector documentation
 
-The generated report verifies the dominant operating mode from CAN content rather than trusting file names alone.
+Use [`CONNECTOR_PINOUTS.md`](CONNECTOR_PINOUTS.md) for the current
+reverse-engineered pin tables. The tables are evidence-qualified and are not an
+official service-manual pinout.
 
-## Bus inventory
+Before fabricating or reconnecting a harness, verify connector-face versus
+harness-side orientation. Pin numbering can be mirrored when the viewing
+direction is not explicit.
 
-- 40 CAN identifiers appear in each supplied capture.
-- Common observed rates include approximately 100, 50, 25, 10, 5 and 3.3 Hz.
-- `0x1E7` is present and tracks brake pressure/response context.
-- Standard Honda Nidec `0x1FA` is absent from every log.
-- CU2 emits `0x33D` with DLC 4; its first four bytes align with known Honda LKAS HUD layouts that are often represented as five-byte messages elsewhere.
+## Grounding
 
-See [`research/can/analysis_report.md`](../research/can/analysis_report.md) for full frequencies and capture integrity data.
+All passive interfaces that exchange logic signals must share a reference ground with the vehicle-side transceiver modules. Any ESP32 GND pin connected to the board ground plane is electrically equivalent; use the mechanically convenient one after checking the board schematic.
 
-## Brake-command candidate
+Do not connect an ESP32 GPIO directly to a vehicle 8–12 V single-wire line.
 
-`0x1C0` is the strongest current candidate for an alternative CU2 `BRAKE_COMMAND`.
+## CAN T-harness topology
 
-Current provisional structure:
+For each CAN conductor, the stock path remains continuous and the logger is a parallel branch:
 
 ```text
-command       = (D1 << 2) | (D2 >> 6)
-pump_request  = D2.b0
-brake_request = D3.b0
-state_flags   = D3 & 0xFE
-counter       = D7[5:4]
-checksum      = D7[3:0]
+female connector ----+---- male connector
+                     |
+                     +---- CANable input
 ```
 
-Observed evidence:
+The same topology applies to CAN-H, CAN-L and reference ground. A three-port WAGO can implement the electrical parallel connection during bench work, although an automotive-quality crimp/splice is preferred for permanent vehicle installation.
 
-- seven-byte DLC;
-- 50 Hz transmission;
-- command is zero in all four negative-control captures;
-- command is active in all four positive braking captures;
-- Honda checksum validation passes 100% of frames in the supplied dataset;
-- counter continuity is approximately 99.9–100%, with discontinuities consistent with dropped capture frames;
-- D4–D6 are zero in the current data;
-- magnitude closely follows measured braking response;
-- combined cross-correlation with `0x1E7` peaks around +120 ms with Pearson `r = 0.986`;
-- maximum command versus maximum pressure rise across identified intervals has Pearson correlation `0.991`.
+## CAN termination
 
-This is strong evidence of function, not proof of a safe transmit format.
+A passive logger attached to an already terminated vehicle bus must not add another 120-ohm terminator. The CANable termination jumper should therefore be removed for in-vehicle tapping.
 
-## Important context messages
+A resistance near 120 ohms on an isolated bench harness with one enabled CANable terminator can be normal. With the CANable terminator removed and the harness disconnected from the vehicle, a high resistance such as tens of kilohms is also expected. On the fully connected, powered-down vehicle bus, approximately 60 ohms between CAN-H and CAN-L is the usual two-terminator expectation, but the exact measurement point and module sleep state matter.
 
-The current DBC/report uses or references:
+## Serial logger topology
 
-- `0x17C` — powertrain, ACC and brake-pedal context;
-- `0x1A4` — `COMPUTER_BRAKING` controller state used to identify intervals;
-- `0x1E7` — brake pressure/response;
-- `0x158` — engine/vehicle-speed context;
-- `0x1D0` — wheel-speed/vehicle response;
-- `0x30C` — ACC HUD/context;
-- `0x33D` — LKAS HUD, CU2 DLC 4.
+Keep the stock LKAS-to-EPS wiring intact. Connect each serial candidate wire only to the LIN/single-wire input of one physical-layer module. Connect the module's TTL output to an ESP32 RX pin through level conversion if the module outputs 5 V logic.
 
-Names inherited from other Honda DBCs remain confidence-qualified in the CU2 DBC.
+Canonical wiring and firmware constraints live in [`firmware/serial-steering/docs/WIRING.md`](../firmware/serial-steering/docs/WIRING.md).
 
-## What is not yet proven
+## Power
 
-- Exact engineering units and saturation for `0x1C0.command`.
-- Exact meaning of `D2.b0`, `D3.b0` and remaining D3 state flags.
-- Node that owns `0x1C0` under all operating modes.
-- Required relationship with VSA, PCM and ACC watchdog messages.
-- Behaviour when frames are missing, delayed, duplicated or counter-invalid.
-- Whether openpilot can safely replace, suppress or coexist with the stock sender.
-- Minimum and maximum controllable deceleration.
+- Power ESP32 by USB during the passive-logging milestone.
+- Do not feed vehicle 12 V directly into the ESP32.
+- Power the single-wire transceiver boards from an appropriately fused supply according to their actual board design.
+- Verify whether module `RX`, `SLP` and `INH` pins have onboard pull-ups or require explicit biasing.
 
-## Required follow-up captures
+## Capture discipline
 
-Use separate, annotated runs for:
+For every run, record:
 
-- repeated small ACC decelerations;
-- repeated large ACC decelerations;
-- set-speed changes without a lead vehicle;
-- lead-vehicle following at multiple gaps;
-- CMBS warning without braking, if safely reproducible;
-- manual brake pedal only;
-- module unplug/fault tests on a bench or controlled setup.
+- date, vehicle configuration and firmware version;
+- physical connector and pin used, including connector viewing direction;
+- interface serial number and termination state;
+- ignition/engine/brake/ACC/LKAS state and explicit event markers;
+- whether ACC, LKAS or CMBS was active;
+- whether the connector was connected, back-probed or disconnected;
+- anomalies, dashboard warnings and blown fuses;
+- hashes of raw output files.
 
-Do not combine unrelated manoeuvres when a clean single-purpose capture is possible.
+Never edit a raw capture in place. Store derived/normalized copies separately.
+
+## Known incident: stop-light fuse
+
+During earlier probing, fuse no. 12 (15 A, stop lights) was blown. Symptoms included an ACC error and inability to move the selector because the brake-pedal interlock no longer saw the stop-light circuit. Replacing the fuse restored operation; the ACC warning cleared after a short drive.
+
+Lesson: a listen-only interface does not protect against wiring mistakes, probe slips or an incorrectly built harness. Verify continuity and absence of shorts before reconnecting modules.

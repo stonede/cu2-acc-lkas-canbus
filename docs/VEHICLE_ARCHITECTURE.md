@@ -1,55 +1,85 @@
-# Honda Accord CU2 openpilot knowledge base
+# Vehicle architecture
 
-This directory is the project-level source of truth for the planned comma.ai/openpilot integration with the European/Japanese-market Honda Accord VIII CU2.
+## Subject vehicle
 
-Detailed tooling remains next to the code and data that produce it:
+- Honda Accord VIII CU2, European/Japanese-market architecture
+- Model year: 2013 facelift
+- Engine: K24
+- Transmission: automatic
+- OEM systems: ACC, CMBS and LKAS
 
-- CAN captures, DBC and analysis: [`research/can/`](../research/can/README.md)
-- Passive serial-steering logger: [`firmware/serial-steering/`](../firmware/serial-steering/README.md)
+This architecture must not be confused with the North American eighth-generation Accord. The closest US-market relative for some body/service information is the Acura TSX, but ADAS details still require CU2-specific verification.
 
-## Documentation map
+## Identified modules
 
-| Document | Purpose |
-|---|---|
-| [Project status](PROJECT_STATUS.md) | Current state, completed work, unresolved questions and next milestones |
-| [Vehicle architecture](VEHICLE_ARCHITECTURE.md) | CU2 ADAS modules, buses and observed communication paths |
-| [Hardware and capture](HARDWARE_AND_CAPTURE.md) | T-harnesses, CANable, ESP32, physical-layer modules and safe logging procedure |
-| [CAN research summary](CAN_RESEARCH_SUMMARY.md) | Dataset, known messages, brake-command analysis and limitations |
-| [Serial steering research](SERIAL_STEERING_RESEARCH.md) | LKAS↔EPS single-wire protocol assumptions and logger status |
-| [Openpilot integration plan](OPENPILOT_INTEGRATION_PLAN.md) | Staged route from passive logging to a safety-reviewed integration |
-| [Evidence ledger](EVIDENCE_LEDGER.md) | Claim-by-claim confidence, source and required follow-up |
+| Function | Part number | Current understanding |
+|---|---|---|
+| LKAS camera/controller | `36870-TL3-B11` | Camera and lateral controller; no separate facelift LKAS unit identified |
+| Radar | `36802-TL0-G11` | Connected to ACC controller through a separate single-wire link |
+| ACC/ADAS controller | `36700-TL3-B01-M` | Participates in F-CAN and controls ACC/CMBS functions |
+| EPS | not yet recorded here | Exchanges two single-wire serial channels with LKAS system |
 
-## Evidence labels
 
-- **Confirmed** — directly measured on this specific 2013 CU2, reproduced in supplied captures, or established by continuity/pin measurements.
-- **Observed** — seen in one or more captures or vehicle tests, but not yet reproduced enough to treat as a protocol invariant.
-- **Inferred** — best current interpretation of measurements, correlations or related Honda implementations.
-- **Community report** — supplied by another reverse engineer and not yet independently reproduced in this car.
-- **Open** — unknown or actively disputed.
+## Connector-level evidence
 
-Raw captures and measurements outrank decoded names. A signal name copied from another Honda platform is not automatically confirmed for the CU2.
+The current reverse-engineered connector tables are maintained in
+[`CONNECTOR_PINOUTS.md`](CONNECTOR_PINOUTS.md). They locate the likely F-CAN
+pair at both the ACC and LKAS connectors and identify several single-wire
+candidates, but connector orientation and most function names still require
+repeatable validation.
 
-## Canonical artifacts
+Do not infer signal direction from the original `RX?`/`TX?` labels; the
+viewpoint was not recorded.
 
-- [`research/can/data/`](../research/can/data/) — original CAN captures; preserve them unchanged.
-- [`research/can/analyze_can.py`](../research/can/analyze_can.py) — reproducible CAN analysis.
-- [`research/can/analysis_report.md`](../research/can/analysis_report.md) — generated results for the current dataset.
-- [`research/can/2013_CU_honda_accord.dbc`](../research/can/2013_CU_honda_accord.dbc) — current definitions and confidence comments.
-- [`firmware/serial-steering/`](../firmware/serial-steering/) — receive-only ESP32 logger and host-side tools.
+## Current communication model
 
-## Scope and safety boundary
+```text
+                   separate single-wire link
+OEM radar  ---------------------------------------->  ACC/ADAS unit
+                                                         |
+                                                         | shared F-CAN
+                                                         |
+PCM / VSA / cluster / HUD / other modules  <-------------+------------>  LKAS camera
+                                                                          |
+                                                                          | two independent
+                                                                          | single-wire serial paths
+                                                                          v
+                                                                         EPS
+```
 
-This repository currently supports reverse engineering and passive data collection. It does **not** establish that any candidate steering or braking message is safe to transmit.
+The arrow on the radar link is an inference, not a confirmed direction.
 
-Before active control is attempted, the project must separately demonstrate deterministic protocol understanding, electrical fail-safe behaviour, watchdog/pass-through behaviour, correct timing/counters/checksums, panda safety coverage, and controlled bench and closed-course validation.
+## Shared F-CAN
 
-No result in this repository should be treated as permission to inject unverified frames on public roads.
+**Confirmed for the supplied captures:** the observed vehicle traffic is on one common CAN network. It contains the messages used for:
 
-## Maintenance rules
+- powertrain and vehicle speed context;
+- brake/pressure response;
+- ACC state and set speed;
+- ACC/LKAS HUD state;
+- steering sensor context;
+- buttons and VSA-related state;
+- the current `0x1C0` brake-command candidate.
 
-- Put project-wide conclusions in `docs/` and implementation details beside relevant code.
-- Add a date and evidence source when promoting a statement from inferred to confirmed.
-- Keep hypotheses explicit.
-- Preserve original captures; derived files should be reproducible from scripts.
-- Record failed experiments and disproved assumptions.
-- Create `integrations/openpilot/` only when working integration code exists.
+Earlier assumptions about a separate ACC CAN should be treated as superseded for this tested facelift CU2 unless new physical evidence proves otherwise.
+
+## Serial steering paths
+
+The lateral steering link is not represented by the conventional Honda CAN steering-command messages expected by current openpilot integrations. The working model is two independent 12 V single-wire serial channels between LKAS and EPS:
+
+- probable LKAS-to-EPS command direction;
+- probable EPS-to-LKAS feedback direction.
+
+Reference implementations suggest 9600 baud, 8E1, with 4-byte and 5-byte frames respectively, but this still requires capture on the subject car.
+
+## Radar link
+
+A separate wire between radar and ACC unit measured approximately 8.5 V in one previous investigation. The connector worksheet separately records 4.3 V at ACC pin 14, labelled `radar data`; the conditions and exact equivalence of those observations are unresolved. It may be LIN-like or another proprietary single-wire physical layer. The following remain open:
+
+- exact electrical layer;
+- baud and framing;
+- directionality;
+- whether the radar transmits continuously or responds to polling;
+- whether it can be passively monitored with the current TJA1020/TJA1021-style modules.
+
+Do not label this link as LIN until framing and bus behaviour are measured.

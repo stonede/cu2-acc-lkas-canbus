@@ -1,0 +1,31 @@
+connector,pin,wire_colour_observed,terminal_observed,voltage_snapshot_v,working_label_original,source,status
+ACC/ADAS controller,1,white,yes,2.7,can H,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,2,black,yes,,ground,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,3,teal,yes,9.3,k-line,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,4,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,5,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,6,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,7,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,8,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,9,blue,yes,11.9,ignition,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,10,green,yes,0,brake,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,11,red,yes,2.2,can L,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,12,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,13,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,14,blue,yes,4.3,radar data,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,15,white,yes,11.9,brake light?,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,16,red,yes,0,write enable,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,17,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,18,white,yes,11.5,12V,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,19,black,yes,,ground,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+ACC/ADAS controller,20,black,yes,,ground,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,1,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,2,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,3,white,yes,6.3,RX?,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,4,teal,yes,9.3,k-line?,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,5,blue,yes,8.5,TX?,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,6,brown,yes,11.8,12V,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,7,white,yes,2.7,can H,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,8,red,yes,2.2,can L,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,9,black,yes,,ground,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,10,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
