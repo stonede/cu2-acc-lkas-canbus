@@ -1,40 +1,31 @@
-# cu2-acc-lkas-canbus
+# Honda Accord CU2 tooling
 
-Automated analysis of Honda Accord CU2 CAN logs to identify a possible
-non-standard ACC/CMBS brake command.
+One repository for experiments and tools around the Honda Accord CU2,
+openpilot, CAN and the stock serial steering interface.
 
-```powershell
-py -3 analyze_can.py
+## Repository layout
+
+```text
+firmware/
+  serial-steering/  ESP32 receive-only LKAS↔EPS serial logger
+research/
+  can/              CAN captures, DBC and brake-command analysis
 ```
 
-The default inputs are:
+Each directory is self-contained and has its own README, commands and data.
+Add a new top-level area only when the code has a different purpose; extend an
+existing area when it uses the same hardware, build or dataset.
 
-- `bra.csv` — original mixed capture,
-- `bra2.csv` — braking after reducing the ACC set speed,
-- `brk_full.csv` — ACC braking behind a lead vehicle,
-- `cmb.csv` — braking during a CMBS activation,
-- `idle.csv` — stationary negative control,
-- `reg.csv` — regular-driving negative control,
-- `acc.csv` — ACC-only negative control,
-- `lkas.csv` — ACC+LKAS negative control.
+For future additions, keep device code in `firmware/<device>/`, measurements
+and reverse engineering in `research/<topic>/`, and openpilot-specific code in
+`integrations/openpilot/`. Do not create those directories until they contain
+working code.
 
-The result is written to `analysis_report.md`. Override the input or output paths
-with `--baseline`, `--set-speed`, `--acc-brake`, `--cmbs`, `--idle`,
-`--regular`, `--acc`, `--lkas`, and `--output`.
-Run the built-in parser and ranking check with `py -3 analyze_can.py --self-test`.
+## Current projects
 
-The analyzer infers each capture's dominant ACC/LKAS state from CAN data.
-Candidate scoring is aggregated per capture, so a CSV contributes at most one
-vote even when `COMPUTER_BRAKING` contains several intervals. Those intervals
-are controller states and are not interpreted as separate physical maneuvers.
-The report also decodes `0x1C0` as a complete candidate brake-command structure,
-validates its Honda checksum and counter, and compares its command ramp with
-`0x1E7` brake pressure.
+- [Serial steering logger](firmware/serial-steering/README.md)
+- [CAN research](research/can/README.md)
 
-`2013_CU_honda_accord.dbc` covers every ID in the eight captures. Its comments
-label CU2-confirmed, related-Accord, inherited-Nidec, and unresolved evidence;
-unknown cyclic messages are intentionally not described as diagnostic traffic.
-
-The report identifies candidates for further reverse engineering. It does not
-establish that any frame is safe to transmit and must not be used as the basis
-for transmitting candidate frames on public roads.
+Safety notes and signal interpretations live with the relevant project. None
+of the research in this repository establishes that a candidate frame is safe
+to transmit on public roads.

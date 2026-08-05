@@ -13,6 +13,9 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+HERE = Path(__file__).resolve().parent
+DATA = HERE / "data"
+
 WRAP_US = 1_000_000
 MERGE_GAP_US = 200_000
 PRE_US = 1_000_000
@@ -1265,15 +1268,15 @@ def self_test() -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--baseline", type=Path, default=Path("bra.csv"))
-    parser.add_argument("--set-speed", type=Path, default=Path("bra2.csv"))
-    parser.add_argument("--acc-brake", type=Path, default=Path("brk_full.csv"))
-    parser.add_argument("--cmbs", type=Path, default=Path("cmb.csv"))
-    parser.add_argument("--idle", type=Path, default=Path("idle.csv"))
-    parser.add_argument("--regular", type=Path, default=Path("reg.csv"))
-    parser.add_argument("--acc", type=Path, default=Path("acc.csv"))
-    parser.add_argument("--lkas", type=Path, default=Path("lkas.csv"))
-    parser.add_argument("--output", type=Path, default=Path("analysis_report.md"))
+    parser.add_argument("--baseline", type=Path, default=DATA / "bra.csv")
+    parser.add_argument("--set-speed", type=Path, default=DATA / "bra2.csv")
+    parser.add_argument("--acc-brake", type=Path, default=DATA / "brk_full.csv")
+    parser.add_argument("--cmbs", type=Path, default=DATA / "cmb.csv")
+    parser.add_argument("--idle", type=Path, default=DATA / "idle.csv")
+    parser.add_argument("--regular", type=Path, default=DATA / "reg.csv")
+    parser.add_argument("--acc", type=Path, default=DATA / "acc.csv")
+    parser.add_argument("--lkas", type=Path, default=DATA / "lkas.csv")
+    parser.add_argument("--output", type=Path, default=HERE / "analysis_report.md")
     parser.add_argument("--self-test", action="store_true")
     return parser.parse_args()
 
