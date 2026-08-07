@@ -56,7 +56,10 @@ a 3× lead over the competing hypothesis. Until then, bytes are retained as
 authoritative.
 
 See [the log format](docs/LOG_FORMAT.md) and the original
-[implementation plan](docs/IMPLEMENTATION_PLAN.md).
+[implementation plan](docs/IMPLEMENTATION_PLAN.md). The first in-vehicle test,
+including the confirmed 4.89 V module outputs and required electrical
+correction, is documented in the
+[2026-08-07 vehicle test report](docs/VEHICLE_TEST_2026-08-07.md).
 
 On Windows, an ESP toolchain may misread package paths containing non-ASCII
 characters. If an existing `crt0.o` or `libgcc.a` is reported missing, set

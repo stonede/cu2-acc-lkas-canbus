@@ -1,6 +1,6 @@
 # Evidence ledger
 
-Last consolidated: 2026-08-05.
+Last consolidated: 2026-08-07.
 
 | Claim | Status | Evidence | Required follow-up |
 |---|---|---|---|
@@ -24,6 +24,8 @@ Last consolidated: 2026-08-05.
 | CANable termination must be disabled on the connected vehicle bus | Confirmed engineering requirement | Existing vehicle bus already terminated | Record jumper state in every capture |
 | Either ESP32 GND pin may be used | Confirmed for normal dev boards | Ground pins share board ground plane | Check exact board schematic if variant differs |
 | Passive serial logger cannot transmit on capture channels | Confirmed by current design | TX pins unassigned and TX buffers disabled | Scope outputs during boot/reset before vehicle use |
+| Tested LINTTL3-style module TX outputs are ESP32-safe when directly connected | Disproved | Both modules measured 4.89 V open-circuit; direct connection raised GPIO32/GPIO33 to approximately 3.8 V | Add verified 5 V-to-3.3 V conversion before reconnecting ESP32 |
+| Initial vehicle captures contained serial steering bytes | Disproved for the 2026-08-07 test setup | Two clean captures and one live check reported zero bytes on both UARTs | Repeat only after level conversion and synthetic UART validation; scope the full signal chain if still zero |
 | Stock pass-through is required for an active serial gateway | Safety requirement | Failure analysis | Validate hardware under power loss/reset/stuck-output faults |
 | ACC pins 1/11 and LKAS pins 7/8 are the shared F-CAN pairs | Strongly supported | DMM snapshots near 2.7/2.2 V and existing CAN captures | Document connector view, continuity and differential capture at both connectors |
 | ACC grounds are pins 2/19/20 and LKAS ground is pin 9 | Observed/likely | Black wires and worksheet labels | Confirm low resistance and voltage drop to chassis/module ground |

@@ -42,6 +42,21 @@ TJA1020/TJA1021-style boards are being used as single-wire physical-layer conver
 
 Cheap LINTTL3 boards may expose 5 V TTL output. Measure the board output and level-shift to 3.3 V before an ESP32 input when required.
 
+## Initial in-vehicle capture result
+
+The first in-vehicle attempt on 2026-08-07 produced two clean host sessions but
+zero received UART bytes on both channels. A subsequent electrical check found
+4.89 V on both module TX outputs with the ESP32 disconnected and approximately
+3.8 V at GPIO32/GPIO33 when directly connected. The tested module outputs are
+therefore not ESP32-safe and the zero-byte captures are not valid evidence
+against the protocol hypothesis.
+
+Further vehicle capture is paused until both channels have verified 5 V-to-3.3 V
+conversion and the previously exposed GPIO inputs pass a synthetic 3.3 V,
+9600-baud 8E1 bench test. Full measurements, capture counts and the ordered
+retest procedure are recorded in the
+[2026-08-07 vehicle test report](../firmware/serial-steering/docs/VEHICLE_TEST_2026-08-07.md).
+
 ## Capture goals
 
 For each channel determine:

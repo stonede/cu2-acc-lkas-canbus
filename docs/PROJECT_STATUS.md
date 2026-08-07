@@ -1,6 +1,6 @@
 # Project status
 
-Last consolidated: 2026-08-05.
+Last consolidated: 2026-08-07.
 
 ## Goal
 
@@ -19,6 +19,8 @@ Develop a safe, reproducible path toward comma.ai/openpilot support for a 2013 E
 - `0x1C0` is the strongest current candidate for the CU2 brake command and has valid Honda checksum/counter structure.
 - A receive-only ESP32 logger exists for the two single-wire serial steering channels.
 - The serial logger is deliberately RX-only and retains raw bytes as authoritative data.
+- The first in-vehicle logger attempt identified 4.89 V TTL outputs on both
+  tested physical-layer modules; direct connection to ESP32 GPIO is prohibited.
 - The initial ACC and LKAS connector worksheet has been transcribed into confidence-qualified Markdown and CSV pinout records.
 
 ### Strong current conclusions
@@ -31,7 +33,8 @@ Develop a safe, reproducible path toward comma.ai/openpilot support for a 2013 E
 
 ## Major unresolved work
 
-1. Capture and classify both serial steering directions on the car.
+1. Correct and bench-validate the 5 V-to-3.3 V serial logger interface, then
+   capture and classify both serial steering directions on the car.
 2. Confirm connector-face orientation and exact camera/ACC pin functions with repeatable state-dependent measurements.
 3. Confirm whether the radar single-wire link is unidirectional and identify its physical/protocol layer.
 4. Validate every `0x1C0` field using annotated captures and bench/closed-course testing.
@@ -43,7 +46,20 @@ Develop a safe, reproducible path toward comma.ai/openpilot support for a 2013 E
 
 ## Immediate next milestone
 
-Collect synchronized passive logs with:
+Validate the passive serial logger electrical path before collecting more
+vehicle data:
+
+- add verified 5 V-to-3.3 V conversion on both module TX outputs;
+- confirm GPIO32/GPIO33 still receive a synthetic 3.3 V, 9600-baud 8E1 stream
+  after their prior 3.8 V exposure;
+- verify common ground, SLP high, unused module RX high and end-to-end
+  continuity;
+- repeat stationary captures and, if byte counters remain zero, scope the
+  vehicle line, module TX and divided GPIO node simultaneously.
+
+The electrical milestone exits when valid UART activity reaches both ESP32
+inputs or the absence/loss of activity has been localized to a specific point
+in the signal chain. After that, collect synchronized passive logs with:
 
 - both serial steering channels;
 - F-CAN;

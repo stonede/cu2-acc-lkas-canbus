@@ -26,6 +26,19 @@ input. The logger connects only to each module's `TX`. Cheap modules may expose
 actual module output before connecting it to an ESP32 and add proper 5 V-to-3.3 V
 level conversion when needed.
 
+The two modules tested in the subject vehicle on 2026-08-07 produced **4.89 V**
+at TX with the ESP32 disconnected. Direct connection raised GPIO32/GPIO33 to
+approximately **3.8 V**, above Espressif's documented 3.6 V GPIO tolerance.
+These module outputs must never be connected directly to an ESP32.
+
+For the current passive 9600-baud prototype, a 10 kΩ series resistor from
+module TX to the GPIO and a 20 kΩ resistor from the GPIO node to GND produces
+approximately 3.26 V from the measured 4.89 V output. A proper 5 V-tolerant
+input buffer powered at 3.3 V is preferred for a robust final design. Measure
+the converted level before attaching the ESP32. See the
+[initial vehicle test report](VEHICLE_TEST_2026-08-07.md) for the evidence and
+retest plan.
+
 The defaults target a classic ESP32-WROOM-32/`esp32dev`. GPIO32 and GPIO33 may
 be unavailable or unsuitable on ESP32-C3, ESP32-S3, or WROVER/PSRAM boards.
 Change only `kChannelARxGpio` and `kChannelBRxGpio` in
