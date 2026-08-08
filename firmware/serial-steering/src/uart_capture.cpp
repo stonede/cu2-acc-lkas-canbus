@@ -14,7 +14,7 @@ ChannelRuntimeStats g_channel_stats[2]{};
 std::atomic<ParserMode> g_requested_modes[2]{ParserMode::kAuto, ParserMode::kAuto};
 std::atomic<DirectionGuess> g_directions[2]{DirectionGuess::kUnknown,
                                             DirectionGuess::kUnknown};
-std::atomic<bool> g_decode_enabled{true};
+std::atomic<bool> g_decode_enabled{false};
 std::atomic<std::uint32_t> g_sequence{};
 
 namespace {
@@ -97,6 +97,12 @@ void uart_task(void *argument) {
                 emit_uart_error(config.channel, "frame", count);
                 break;
             }
+            case UART_BREAK: {
+                const auto count =
+                    stats.break_err.fetch_add(1, std::memory_order_relaxed) + 1;
+                emit_uart_error(config.channel, "break", count);
+                break;
+            }
             default:
                 emit_uart_error(config.channel, "unknown_event", 1, event.type);
                 break;
@@ -150,6 +156,7 @@ void reset_runtime_stats() {
         stats.checksum_fail = 0;
         stats.parity_err = 0;
         stats.frame_err = 0;
+        stats.break_err = 0;
         stats.fifo_overflow = 0;
         stats.buffer_full = 0;
         stats.capture_drop.reset();

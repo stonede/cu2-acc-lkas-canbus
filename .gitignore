@@ -3,4 +3,7 @@ __pycache__/
 .pio/
 sdkconfig.*
 !sdkconfig.defaults
-captures/
+
+# Local firmware logger output. Shareable research captures belong under
+# research/serial-steering/data/ and are intentionally tracked there.
+/firmware/serial-steering/captures/

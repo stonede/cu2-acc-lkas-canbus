@@ -1,6 +1,6 @@
 # Project status
 
-Last consolidated: 2026-08-07.
+Last consolidated: 2026-08-08.
 
 ## Goal
 
@@ -21,6 +21,22 @@ Develop a safe, reproducible path toward comma.ai/openpilot support for a 2013 E
 - The serial logger is deliberately RX-only and retains raw bytes as authoritative data.
 - The first in-vehicle logger attempt identified 4.89 V TTL outputs on both
   tested physical-layer modules; direct connection to ESP32 GPIO is prohibited.
+- Corrected captures identify GPIO32/channel A as a checksum-valid 5-byte
+  EPS-to-LKAS candidate and GPIO33/channel B as a checksum-valid 4-byte
+  LKAS-to-EPS candidate, both at approximately 100 frames/s.
+- The successful captures used the physical-layer board pins marked `RX`
+  directly to GPIO32/GPIO33, with no added resistors. This pin-label behavior
+  is board-specific; the pins marked `TX` remain unsafe because the earlier
+  direct measurement reached approximately 4.89 V.
+- The working harness mapping is white wire/LKAS pin 3 -> GPIO32 -> 5-byte
+  EPS-to-LKAS candidate, and blue wire/LKAS pin 5 -> GPIO33 -> 4-byte
+  LKAS-to-EPS candidate. Continuity from connector cavities to the T-harness
+  still needs to be recorded explicitly.
+- Capture 4 contains an automatically detected 3.931-second LKAS-active interval;
+  analysis no longer depends on operator markers during a solo drive.
+- The USB logger path has been hardened with compact records, a 460800-baud
+  buffered console, a larger Windows receive buffer and host sequence-gap
+  accounting. The revised firmware is flashed to the test ESP32.
 - The initial ACC and LKAS connector worksheet has been transcribed into confidence-qualified Markdown and CSV pinout records.
 
 ### Strong current conclusions
@@ -33,8 +49,8 @@ Develop a safe, reproducible path toward comma.ai/openpilot support for a 2013 E
 
 ## Major unresolved work
 
-1. Correct and bench-validate the 5 V-to-3.3 V serial logger interface, then
-   capture and classify both serial steering directions on the car.
+1. Validate the hardened host path under full two-channel vehicle traffic and
+   collect a capture with zero host sequence gaps.
 2. Confirm connector-face orientation and exact camera/ACC pin functions with repeatable state-dependent measurements.
 3. Confirm whether the radar single-wire link is unidirectional and identify its physical/protocol layer.
 4. Validate every `0x1C0` field using annotated captures and bench/closed-course testing.
@@ -46,24 +62,17 @@ Develop a safe, reproducible path toward comma.ai/openpilot support for a 2013 E
 
 ## Immediate next milestone
 
-Validate the passive serial logger electrical path before collecting more
-vehicle data:
-
-- add verified 5 V-to-3.3 V conversion on both module TX outputs;
-- confirm GPIO32/GPIO33 still receive a synthetic 3.3 V, 9600-baud 8E1 stream
-  after their prior 3.8 V exposure;
-- verify common ground, SLP high, unused module RX high and end-to-end
-  continuity;
-- repeat stationary captures and, if byte counters remain zero, scope the
-  vehicle line, module TX and divided GPIO node simultaneously.
-
-The electrical milestone exits when valid UART activity reaches both ESP32
-inputs or the absence/loss of activity has been localized to a specific point
-in the signal chain. After that, collect synchronized passive logs with:
+Validate the hardened logger under full vehicle traffic, requiring live
+`bad=0`, `seq_missing=0`, a confirmed compact mode and zero firmware queue-drop
+counters. Before repeating the direct RX-pin wiring, record the RX-to-GND high
+levels and confirm they remain below 3.6 V. Then collect synchronized passive
+logs with:
 
 - both serial steering channels;
 - F-CAN;
-- explicit event markers for LKAS enable/disable, lane detection, driver torque, stock steering corrections and faults;
+- automatic LKAS enable/disable intervals from the serial stream; optional
+  passenger-entered markers may supplement them, but the driver must not
+  operate the laptop;
 - stable power and timestamping.
 
 The output should be sufficient to establish frame length, direction, checksum, periodicity, command magnitude, feedback fields and timeout behaviour without transmitting anything to the vehicle.

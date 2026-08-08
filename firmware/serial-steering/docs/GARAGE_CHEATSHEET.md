@@ -6,16 +6,22 @@ are already installed, so no internet connection is required in the garage.
 
 ## 0. Current hardware stop condition
 
-The two tested LINTTL3-style modules produce **4.89 V** at their TX outputs.
-Direct connection raised ESP32 GPIO32/GPIO33 to approximately **3.8 V**, above
-the documented ESP32 GPIO tolerance.
+The first test used the pins marked `TX` and measured **4.89 V** with the ESP32
+disconnected. Direct connection raised GPIO32/GPIO33 to approximately **3.8 V**,
+above the documented ESP32 GPIO tolerance. Never connect those `TX` pins
+directly to the ESP32.
 
-Do not reconnect either raw TX output to the ESP32. Before another vehicle
-capture, both channels require verified 5 V-to-3.3 V conversion and the ESP32
-inputs must pass a synthetic 3.3 V, 9600-baud 8E1 bench test. See the
-[2026-08-07 vehicle test report](VEHICLE_TEST_2026-08-07.md).
+The follow-up vehicle capture worked only when the data connection was moved to
+the pins marked `RX`. On the tested boards those pins were connected directly
+to GPIO32/GPIO33, with no added resistors or level converter. This is an
+empirical board-label observation, not a general safety guarantee.
 
-For the current passive prototype, use one divider per channel:
+Before using the direct `RX`-to-GPIO wiring, power the modules with the ESP32
+disconnected and measure both pins marked `RX` to GND while the vehicle
+interface is active. Each high level must remain below 3.6 V. If not, use a
+5 V-to-3.3 V divider or buffer. Keep the pins marked `TX` disconnected.
+
+The divider remains the fallback for any data-output pin above 3.6 V:
 
 ```text
 Module TX ---- 10 kΩ ----+---- ESP32 GPIO32 or GPIO33
@@ -38,12 +44,12 @@ it. It must remain below 3.6 V and should be approximately 3.2–3.3 V.
 - Never connect an 8–12 V vehicle data wire directly to an ESP32 GPIO.
 - Power the physical-layer modules through a correctly fused circuit suitable
   for the actual module design.
-- Connect module A TX through verified level conversion to GPIO32. Connect
-  module B TX through verified level conversion to GPIO33.
-- Do not connect the ESP32 to the modules' RX inputs. The logger is receive-only.
+- Connect the pin marked RX on module A to GPIO32 and the pin marked RX on
+  module B to GPIO33 only after measuring both pins below 3.6 V.
+- Do not connect the pins marked TX to the ESP32. The logger is receive-only.
 - Maintain a common reference ground between both modules and the ESP32.
 - Before vehicle power is applied, verify continuity, absence of shorts, SLP
-  high, unused module RX high, and the converted TX voltages.
+  high, the unused module TX pins, and the measured RX-to-GND voltages.
 - Do not move probes or wiring at vehicle connectors while the ignition is on.
 - Never run the engine in a closed or insufficiently ventilated garage.
 
@@ -65,6 +71,9 @@ py -3 -m platformio --version
 ```
 
 The current setup should report Python 3.12 and PlatformIO 6.1.19.
+
+The current firmware and capture tool use a 460800-baud USB console. The ESP32
+connected to this laptop was flashed with that firmware on 2026-08-08.
 
 Do not run the PlatformIO serial monitor at the same time as the capture
 script. Only one program can own the COM port.
@@ -101,9 +110,32 @@ Replace `COM4` with the detected port. A successful upload ends with `SUCCESS`
 and `Hash of data verified`. The command works offline on this laptop because
 the complete toolchain is already cached.
 
-Do not flash while the raw 4.89 V module outputs are attached to the ESP32.
+Do not flash while any unverified module output is attached to the ESP32.
 
-## 5. Pre-vehicle electrical checklist
+## 5. Current tested wiring checklist
+
+For the boards used in the successful vehicle capture, connect the vehicle
+candidate lines to the modules' LIN terminals, then connect the pins marked
+`RX` directly to ESP32 GPIO32/GPIO33. Do not add resistors unless the voltage
+check below requires them. Leave the pins marked `TX` disconnected.
+
+The current colour/channel mapping is white T-harness wire (LKAS pin 3) ->
+module A -> GPIO32 -> 5-byte EPS-to-LKAS candidate, and blue T-harness wire
+(LKAS pin 5) -> module B -> GPIO33 -> 4-byte LKAS-to-EPS candidate.
+
+With the ESP32 disconnected, power the modules and measure both pins marked
+`RX` to GND. Each high level must remain below 3.6 V. Stop if either pin is
+above 3.6 V, and use a divider or 3.3 V buffer before connecting the ESP32.
+
+Connect module grounds and ESP32 GND together. Verify SLP is high, check for
+shorts, then connect the verified RX pins to GPIO32/GPIO33 with power off.
+Power the ESP32 from USB only, reapply module power, and recheck both GPIO
+voltages before starting a capture.
+
+## 5A. Historical TX/divider checklist
+
+The following older checklist is retained as evidence for the unsafe TX test;
+it is superseded by the RX-pin mapping above for the tested boards.
 
 Perform wiring changes with ignition and module power off:
 
@@ -139,9 +171,18 @@ py -3 tools\capture_serial.py COM4 "captures\garage_$stamp.jsonl"
 ```
 
 Replace `COM4` with the current port. The console should print `capturing` and
-periodic `frames`, `raw`, `errors` and `bad` counters.
+periodic `frames`, `raw`, `errors`, `bad` and `seq_missing` counters. The tool
+automatically requests compact frame records to reduce USB/host load and asks
+Windows for a 1 MiB serial receive buffer. No extra option or interactive
+command is required.
 
-The current host capture script accepts these interactive commands:
+For a solo drive, start the logger while safely parked, leave the laptop alone,
+perform the test, park safely, and then press `Ctrl+C`. Do not type markers or
+otherwise operate the laptop while driving. The analyzer detects LKAS-active
+intervals directly from the 4-byte frames.
+
+If a passenger or stationary operator is available, these commands remain
+optional:
 
 ```text
 !status
@@ -156,9 +197,9 @@ The current host capture script accepts these interactive commands:
 !mark brake_pressed
 ```
 
-Enter short markers at the exact time each event occurs. The current capture
-script forwards only `!status` and `!mark ...`; other firmware console commands
-are not forwarded by this host tool.
+The capture script forwards only `!status` and `!mark ...`; other firmware
+console commands are not forwarded by this host tool. Use `--decoded-json` only
+for troubleshooting because it increases output volume.
 
 Stop capture cleanly with:
 
@@ -172,7 +213,14 @@ Wait for `saved ... frames` before disconnecting USB. Each run produces:
 - `*.bad.log` — bytes that could not be parsed as JSONL;
 - `*.session.json` — host timestamps, clean-shutdown state and final counters.
 
-Never edit the raw `*.jsonl` file in place.
+The additional `*.gaps.jsonl` file records host-detected sequence gaps and stays
+empty when the stream is complete. Never edit the raw `*.jsonl` file in place.
+
+The ESP32 ROM bootloader speaks at a different baud rate. Its startup bytes are
+preserved in `*.bad.log` and counted as `startup_noise`/`boot_noise` in session
+metadata, but are excluded from the live `bad` counter. A healthy run has live
+`bad=0`, `seq_missing=0`, `decode_mode_confirmed: true`, and
+`rx_buffer_configured: true` in `*.session.json`.
 
 ## 7. Analyze a capture offline
 
@@ -183,6 +231,10 @@ Basic summary:
 ```powershell
 py -3 tools\analyze_log.py captures\garage_2026-08-07_2300.jsonl
 ```
+
+The first `host sequence` line reports capture completeness. The desired result
+is `gap_events=0 missing_records=0 nonmonotonic=0`. The summary then lists any
+automatically detected `LKAS active intervals`; no markers are needed.
 
 Analyze one channel:
 
@@ -213,8 +265,16 @@ Get-FileHash captures\garage_2026-08-07_2300.jsonl -Algorithm SHA256
 - `uart_error` — UART hardware event; persistent errors require investigation.
 - host `bad` count — a console line was not valid JSONL. Preserve `*.bad.log`.
 
+A single `break` event per channel is expected in a USB-only bench test with
+GPIO32/GPIO33 disconnected and floating. With the powered vehicle interfaces
+attached, repeated `break`, parity, frame, FIFO or buffer errors require
+investigation.
+
 Auto-detection requires time and enough valid candidate frames. Raw bytes are
 more authoritative than provisional decoded fields.
+
+The host `seq_missing` / `missing_records` value counts records that left the
+firmware but did not arrive as valid JSONL at the host. It should remain zero.
 
 If both `stats` records continue to report `bytes: 0` after the electrical
 interface is corrected and bench-tested, do not change live wiring. Scope or

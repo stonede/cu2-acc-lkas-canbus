@@ -40,8 +40,10 @@ firmware. The USB/host logging path was therefore operational.
 
 | Capture | Duration | Valid stats records | Host `bad` lines | Channel A bytes | Channel B bytes | Frames |
 |---|---:|---:|---:|---:|---:|---:|
-| `captures/1.jsonl` | approximately 412.2 s | 160 total | 5 | 0 | 0 | 0 |
-| `captures/2.jsonl` | approximately 95.3 s | 36 total | 2 | 0 | 0 | 0 |
+| historical capture 1 (not present in the current checkout) | approximately 412.2 s | 160 total | 5 | 0 | 0 | 0 |
+| historical capture 2 (not present in the current checkout) | approximately 95.3 s | 36 total | 2 | 0 | 0 | 0 |
+| `research/serial-steering/data/3.jsonl` | approximately 46.1 s | 10 total | 3 | 2,043 | 2,044 | 4,087 |
+| `research/serial-steering/data/4.jsonl` | approximately 188.5 s | 42 total | 18 | 10,030 | 10,033 | 20,063 |
 | bounded live read | approximately 12 s | 4 total | startup noise observed | 0 | 0 | 0 |
 
 All reported UART parity, frame, FIFO-overflow, buffer-full and queue-drop
@@ -95,7 +97,11 @@ share the module ground.
 Before attaching an ESP32, power the module and verify the divider output with
 a DMM. It should be approximately 3.2–3.3 V and must remain below 3.6 V.
 
-## Ordered next steps
+## Ordered next steps from the initial TX test
+
+The following list records the safety plan before the board-label discrepancy
+was found. For the currently tested wiring, use the later RX-pin clarification
+and the current checklist in `docs/WIRING.md`.
 
 1. Install and independently measure the two 5 V-to-3.3 V input dividers or a
    suitable 5 V-tolerant 3.3 V buffer.
@@ -107,14 +113,56 @@ a DMM. It should be approximately 3.2–3.3 V and must remain below 3.6 V.
    channel a known 3.3 V, 9600-baud 8E1 test stream and require error-free
    capture before returning to the vehicle.
 5. Repeat stationary captures in documented states: ignition on/engine off,
-   engine running, LKAS unavailable, and LKAS ready. Add explicit event markers.
+   engine running, LKAS unavailable, and LKAS ready. Markers are optional when
+   a stationary operator or passenger is available.
 6. If byte counters remain zero, scope or logic-analyze three points at once:
    the vehicle candidate line, the module TX output, and the divided ESP32 GPIO
    node. This will identify whether activity is absent on the vehicle line,
    lost in the transceiver, or lost in the level converter/wiring.
 7. Only after stationary traffic is observed, perform synchronized controlled
-   driving captures with F-CAN and markers for LKAS engagement, correction,
-   lane loss and driver override.
+   driving captures with F-CAN. For solo tests, do not operate the laptop while
+   driving; derive LKAS-active intervals from the serial data after the drive.
 
 No active transmission to either vehicle single-wire channel is authorized by
 this test or by these next steps.
+
+## Follow-up captures and logger hardening — 2026-08-08
+
+After moving the data connections from the pins marked `TX` to the pins marked
+`RX`, captures 3 and 4 established valid traffic on both inputs at approximately
+100 frames/s per channel. The operator reports that these captures used a
+direct RX-to-ESP32 connection with no added resistors or level converter.
+The high-level voltage of the pins marked `RX` was not recorded separately in
+that test, so direct operation is evidence of functionality only, not of GPIO
+electrical safety.
+Channel A/GPIO32 consistently carried checksum-valid 5-byte EPS-to-LKAS
+candidates and was connected to the white T-harness wire (LKAS pin 3); channel
+B/GPIO33 carried checksum-valid 4-byte LKAS-to-EPS candidates and was connected
+to the blue T-harness wire (LKAS pin 5). Capture 4
+contained one automatically detectable LKAS-active interval from 132.123 s to
+136.054 s (394 frames), with provisional steering command values from -21 to
+86. No operator markers were required.
+
+Firmware statistics reported no capture/output queue drops, but host sequence
+analysis found 2,438 missing records in capture 3 and 15,387 in capture 4. The
+loss was therefore localized to the UART0/CP2102/Windows host path rather than
+the two vehicle UART inputs.
+
+The logger was hardened as follows:
+
+- the USB console was reduced from 921600 to 460800 baud;
+- compact raw frame JSON became the firmware and host default;
+- UART0 now uses an interrupt-driven VFS RX/TX driver and TX buffer;
+- the Windows receive buffer is requested at 1 MiB and stale input is cleared;
+- the host records global sequence gaps in `*.gaps.jsonl` and session metadata;
+- the analyzer reconstructs provisional fields offline and automatically lists
+  LKAS-active intervals;
+- bootloader noise is preserved separately from live malformed-line counts.
+
+The revised firmware was flashed to the test ESP32. A 20-second USB-only smoke
+test with the vehicle disconnected confirmed the compact command on its first
+attempt, a configured 1 MiB receive buffer, clean shutdown, zero live malformed
+records and zero sequence gaps. Vehicle-load validation is still required on
+the next capture. The earlier divider recommendation applies to the pins
+marked `TX`; it must not be used to claim that the pins marked `RX` are safe
+without a direct voltage measurement.

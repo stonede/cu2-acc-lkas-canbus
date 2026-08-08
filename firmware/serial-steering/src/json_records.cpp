@@ -160,7 +160,8 @@ bool format_stats_record(OutputRecord &output, std::int64_t time_us,
         output.text.data(), output.text.size(),
         "{\"type\":\"stats\",\"t_us\":%lld,\"channel\":\"%s\",\"bytes\":%lu,"
         "\"valid_4\":%lu,\"valid_5\":%lu,\"checksum_fail\":%lu,"
-        "\"parity_err\":%lu,\"frame_err\":%lu,\"fifo_overflow\":%lu,"
+        "\"parity_err\":%lu,\"frame_err\":%lu,\"break_err\":%lu,"
+        "\"fifo_overflow\":%lu,"
         "\"buffer_full\":%lu,\"capture_queue_drop\":%lu,"
         "\"capture_bytes_dropped\":%lu,\"queue_drop\":%lu,"
         "\"captured_output_drop\":%lu,\"captured_output_bytes_dropped\":%lu,"
@@ -172,6 +173,7 @@ bool format_stats_record(OutputRecord &output, std::int64_t time_us,
         static_cast<unsigned long>(stats.checksum_fail),
         static_cast<unsigned long>(stats.parity_err),
         static_cast<unsigned long>(stats.frame_err),
+        static_cast<unsigned long>(stats.break_err),
         static_cast<unsigned long>(stats.fifo_overflow),
         static_cast<unsigned long>(stats.buffer_full),
         static_cast<unsigned long>(stats.capture_queue_drop),
@@ -184,14 +186,16 @@ bool format_stats_record(OutputRecord &output, std::int64_t time_us,
 }
 
 bool format_session_record(OutputRecord &output, const char *git_version,
-                           const char *boot_id, int vehicle_baud,
+                           const char *boot_id, int vehicle_baud, int console_baud,
                            int channel_a_gpio, int channel_b_gpio) {
     return finish(output, std::snprintf(
         output.text.data(), output.text.size(),
-        "{\"type\":\"session\",\"schema\":1,\"firmware\":\"0.1.0\",\"git\":\"%s\","
+        "{\"type\":\"session\",\"schema\":1,\"firmware\":\"0.2.0\",\"git\":\"%s\","
         "\"boot_id\":\"%s\",\"vehicle_baud\":%d,\"format\":\"8E1\","
+        "\"console_baud\":%d,\"frame_json_default\":\"compact\","
         "\"channel_a_gpio\":%d,\"channel_b_gpio\":%d,\"capture_mode\":\"rx_only\"}",
-        git_version, boot_id, vehicle_baud, channel_a_gpio, channel_b_gpio));
+        git_version, boot_id, vehicle_baud, console_baud, channel_a_gpio,
+        channel_b_gpio));
 }
 
 bool format_mark_record(OutputRecord &output, std::int64_t time_us,

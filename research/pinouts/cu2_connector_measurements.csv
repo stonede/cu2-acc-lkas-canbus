@@ -21,9 +21,9 @@ ACC/ADAS controller,19,black,yes,,ground,pinout.xlsx / Arkusz1,raw transcription
 ACC/ADAS controller,20,black,yes,,ground,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
 LKAS camera/controller,1,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
 LKAS camera/controller,2,,no,,,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
-LKAS camera/controller,3,white,yes,6.3,RX?,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,3,white,yes,6.3,RX?,pinout.xlsx / Arkusz1,raw transcription; captures 3/4 map white T-harness wire to ESP32 GPIO32; checksum-valid 5-byte EPS-to-LKAS candidate; physical-layer pin marked RX; RX high-level voltage not separately measured
 LKAS camera/controller,4,teal,yes,9.3,k-line?,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
-LKAS camera/controller,5,blue,yes,8.5,TX?,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
+LKAS camera/controller,5,blue,yes,8.5,TX?,pinout.xlsx / Arkusz1,raw transcription; captures 3/4 map blue T-harness wire to ESP32 GPIO33; checksum-valid 4-byte LKAS-to-EPS candidate; physical-layer pin marked RX; RX high-level voltage not separately measured
 LKAS camera/controller,6,brown,yes,11.8,12V,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
 LKAS camera/controller,7,white,yes,2.7,can H,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified
 LKAS camera/controller,8,red,yes,2.2,can L,pinout.xlsx / Arkusz1,raw transcription; function labels not independently verified

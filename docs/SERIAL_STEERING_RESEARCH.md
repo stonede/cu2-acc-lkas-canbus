@@ -12,12 +12,14 @@ Based on `reddn/LINInterfaceV2` and `mlocoteta/serialSteeringHardware`:
 
 - 9600 baud;
 - 8 data bits, even parity, 1 stop bit (`8E1`);
-- likely 4-byte LKAS-to-EPS command frames;
-- likely 5-byte EPS-to-LKAS feedback frames;
+- 4-byte LKAS-to-EPS candidate frames observed on GPIO33/blue wire;
+- 5-byte EPS-to-LKAS candidate frames observed on GPIO32/white wire;
 - first-byte plausibility rule `(byte >> 4) < 4`;
 - checksum is calculated from preceding bytes, folded into 7 bits and placed in the `0x80–0xFF` range.
 
-These are reference-derived assumptions, not yet confirmed on this specific car.
+The checksum-valid lengths and direction mapping are strongly supported by
+captures 3 and 4. Field meanings and the claim that this is standard LIN
+remain provisional.
 
 ## Logger implementation
 
@@ -42,6 +44,21 @@ TJA1020/TJA1021-style boards are being used as single-wire physical-layer conver
 
 Cheap LINTTL3 boards may expose 5 V TTL output. Measure the board output and level-shift to 3.3 V before an ESP32 input when required.
 
+Important board-label finding from the follow-up vehicle test: on the two boards
+used here, readable data reached the ESP32 from the pins marked `RX`, not the
+pins marked `TX`. The successful captures used a direct RX-to-ESP32 connection
+with no added resistors or level converter. This is board-specific evidence;
+measure the pin marked `RX` directly before reusing this wiring, and use level
+conversion if it exceeds 3.6 V. Keep the pins marked `TX` disconnected because
+the earlier TX test measured 4.89 V and raised the ESP32 GPIOs to approximately
+3.8 V.
+
+The physical channel mapping is now also constrained: the white T-harness wire
+(LKAS connector pin 3) was connected to GPIO32 and carried the 5-byte
+EPS-to-LKAS candidate; the blue T-harness wire (LKAS connector pin 5) was
+connected to GPIO33 and carried the 4-byte LKAS-to-EPS candidate. Continuity
+from the connector cavities to the harness wires should still be recorded.
+
 ## Initial in-vehicle capture result
 
 The first in-vehicle attempt on 2026-08-07 produced two clean host sessions but
@@ -51,10 +68,9 @@ zero received UART bytes on both channels. A subsequent electrical check found
 therefore not ESP32-safe and the zero-byte captures are not valid evidence
 against the protocol hypothesis.
 
-Further vehicle capture is paused until both channels have verified 5 V-to-3.3 V
-conversion and the previously exposed GPIO inputs pass a synthetic 3.3 V,
-9600-baud 8E1 bench test. Full measurements, capture counts and the ordered
-retest procedure are recorded in the
+The follow-up test then moved both data taps to the pins marked `RX` and
+produced captures 3 and 4. Full measurements, capture counts, the label
+discrepancy and the ordered retest procedure are recorded in the
 [2026-08-07 vehicle test report](../firmware/serial-steering/docs/VEHICLE_TEST_2026-08-07.md).
 
 ## Capture goals
@@ -82,7 +98,9 @@ For each channel determine:
 - lane loss and LKAS disengagement;
 - stock ACC/LKAS fault or module restart, only in a controlled environment.
 
-Mark every event in the serial log and capture F-CAN at the same time.
+Mark events in the serial log when a passenger or stationary operator is
+available, and capture F-CAN at the same time. For solo driving, leave the
+laptop alone; the host analyzer derives LKAS-active intervals after the run.
 
 ## Active interface requirements
 

@@ -47,6 +47,14 @@ A resistance near 120 ohms on an isolated bench harness with one enabled CANable
 
 Keep the stock LKAS-to-EPS wiring intact. Connect each serial candidate wire only to the LIN/single-wire input of one physical-layer module. Connect the module's TTL output to an ESP32 RX pin through level conversion if the module outputs 5 V logic.
 
+Board-label exception observed on the tested modules: readable data was obtained
+from the pins marked `RX`, not the pins marked `TX`. Captures 3 and 4 used a
+direct connection from those `RX` pins to ESP32 GPIO32/GPIO33 with no added
+resistors. This is not a general safety assumption: measure the actual `RX`
+pin under power and use level conversion whenever it exceeds 3.6 V. The pins
+marked `TX` previously measured 4.89 V and must remain disconnected from the
+ESP32.
+
 Canonical wiring and firmware constraints live in [`firmware/serial-steering/docs/WIRING.md`](../firmware/serial-steering/docs/WIRING.md).
 
 ## Power
@@ -63,7 +71,8 @@ For every run, record:
 - date, vehicle configuration and firmware version;
 - physical connector and pin used, including connector viewing direction;
 - interface serial number and termination state;
-- ignition/engine/brake/ACC/LKAS state and explicit event markers;
+- ignition/engine/brake/ACC/LKAS state and optional event markers when a
+  passenger or stationary operator is available;
 - whether ACC, LKAS or CMBS was active;
 - whether the connector was connected, back-probed or disconnected;
 - anomalies, dashboard warnings and blown fuses;

@@ -600,6 +600,11 @@ The implementation is complete only when:
 
 ### `docs/WIRING.md`
 
+The original generic wiring sketch below assumed conventional LINTTL3 `TX`
+output labels. Follow-up captures showed that the tested boards produced
+readable data on their pins marked `RX` instead; the current board-specific
+mapping and voltage warning in `docs/WIRING.md` supersede that initial sketch.
+
 Document this receive-only topology:
 
 ```text

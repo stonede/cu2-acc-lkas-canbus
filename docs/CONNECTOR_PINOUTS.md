@@ -21,8 +21,10 @@ measurement snapshots, not nominal voltage specifications or safe GPIO levels.
   harness, but may still require repetition.
 - **Working label** preserves the original reverse-engineering interpretation.
 - A question mark means the function or direction is unconfirmed.
-- `RX` and `TX` are ambiguous without naming the viewpoint. Until frame
-  direction is captured, use neutral names such as `serial candidate A/B`.
+- `RX` and `TX` are ambiguous without naming the viewpoint. The current
+  captures establish the working vehicle-wire directions for LKAS pins 3 and
+  5, but do not prove that the physical-layer board labels use the same
+  viewpoint.
 - A DMM reading on a switching data line is an average-like snapshot and cannot
   establish waveform levels, baud rate or protocol.
 
@@ -76,14 +78,33 @@ The machine-readable transcription is stored in
 |---:|---|---:|---|---|
 | 1 | no terminal observed | — | — | Empty in subject harness; other variants may differ |
 | 2 | no terminal observed | — | — | Empty in subject harness; other variants may differ |
-| 3 | white | 6.3 V | RX? | **Open** serial steering candidate A; direction not confirmed |
+| 3 | white | 6.3 V | RX? | **Strongly supported** serial steering candidate A; white T-harness wire was captured on ESP32 GPIO32 as a 5-byte EPS-to-LKAS candidate |
 | 4 | teal | 9.3 V | K-line? | **Open** single-wire/diagnostic candidate; may be related to ACC pin 3, but continuity is not recorded |
-| 5 | blue | 8.5 V | TX? | **Open** serial steering candidate B; direction not confirmed |
+| 5 | blue | 8.5 V | TX? | **Strongly supported** serial steering candidate B; blue T-harness wire was captured on ESP32 GPIO33 as a 4-byte LKAS-to-EPS candidate |
 | 6 | brown | 11.8 V | 12 V | **Observed** supply-level voltage; constant versus switched not recorded |
 | 7 | white | 2.7 V | CAN H | **Strongly supported** F-CAN high |
 | 8 | red | 2.2 V | CAN L | **Strongly supported** F-CAN low |
 | 9 | black | — | ground | **Observed/likely** ground; confirm continuity |
 | 10 | no terminal observed | — | — | Empty in subject harness; other variants may differ |
+
+## Captured serial-steering mapping
+
+Captures 3 and 4, together with the documented T-harness colours, provide the
+following working physical mapping:
+
+| T-harness wire | LKAS connector pin | ESP32 input | Observed frame hypothesis | Confidence |
+|---|---:|---:|---|---|
+| white | 3 | GPIO32 | 5-byte EPS-to-LKAS feedback | Strongly supported |
+| blue | 5 | GPIO33 | 4-byte LKAS-to-EPS command | Strongly supported |
+
+The mapping assumes the white and blue wires in the T-harness are continuous
+with LKAS pins 3 and 5 as shown in the worksheet; record a continuity check to
+promote this from colour-plus-capture evidence to confirmed pin identity. The
+physical-layer boards produced readable data from their pins marked `RX`; no
+added resistors were used in captures 3 and 4. The high-level voltage of those
+`RX` pins was not recorded separately, so electrical safety remains an open
+follow-up. The earlier board pins marked `TX` measured 4.89 V and are not the
+same as the working direct data connection.
 
 ## Important unresolved discrepancy
 
@@ -132,8 +153,9 @@ Before promoting any working label:
    appropriate, and differential traffic capture.
 5. Scope pins 3/4/5 at the LKAS connector and pins 3/14/16 at the ACC connector
    using high-impedance passive probing or suitable protected transceivers.
-6. Capture both suspected steering channels together with F-CAN and event
-   markers.
+6. Capture both suspected steering channels together with F-CAN. Add event
+   markers only when a passenger or stationary operator is available; for solo
+   driving, derive LKAS-active intervals offline.
 7. Record whether measurements were taken connected, back-probed or
    disconnected; loading can materially change single-wire voltages.
 8. Hash and preserve raw scope/UART captures.
@@ -149,9 +171,9 @@ proven:
 | ACC 3 | `ACC_SINGLE_WIRE_A` |
 | ACC 14 | `ACC_RADAR_SINGLE_WIRE_CANDIDATE` |
 | ACC 16 | `ACC_UNKNOWN_PIN16` |
-| LKAS 3 | `LKAS_SERIAL_A` |
+| LKAS 3 | `LKAS_SERIAL_EPS_TO_LKAS` |
 | LKAS 4 | `LKAS_SINGLE_WIRE_DIAG_CANDIDATE` |
-| LKAS 5 | `LKAS_SERIAL_B` |
+| LKAS 5 | `LKAS_SERIAL_LKAS_TO_EPS` |
 | LKAS 7 / 8 | `LKAS_FCAN_H` / `LKAS_FCAN_L` |
 
 Renaming a temporary signal should be a documented evidence change, not a

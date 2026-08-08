@@ -35,6 +35,7 @@ StatsSnapshot snapshot(const ChannelRuntimeStats &stats) {
     result.checksum_fail = stats.checksum_fail.load(std::memory_order_relaxed);
     result.parity_err = stats.parity_err.load(std::memory_order_relaxed);
     result.frame_err = stats.frame_err.load(std::memory_order_relaxed);
+    result.break_err = stats.break_err.load(std::memory_order_relaxed);
     result.fifo_overflow = stats.fifo_overflow.load(std::memory_order_relaxed);
     result.buffer_full = stats.buffer_full.load(std::memory_order_relaxed);
     result.capture_queue_drop = stats.capture_drop.records();
@@ -146,6 +147,7 @@ void enqueue_session_record() {
                   static_cast<unsigned long>(esp_random()));
     if (format_session_record(record, APP_GIT_HASH, boot_id,
                               app_config::kVehicleBaud,
+                              app_config::kConsoleBaud,
                               static_cast<int>(app_config::kChannelARxGpio),
                               static_cast<int>(app_config::kChannelBRxGpio))) {
         enqueue_output(record, ChannelId::kA);

@@ -15,7 +15,7 @@ between a Honda LKAS camera/controller and EPS.
 | A | UART1 | GPIO32 | auto |
 | B | UART2 | GPIO33 | auto |
 
-Both inputs are 9600 baud, 8E1. UART0 emits JSONL at 921600 baud. The default
+Both inputs are 9600 baud, 8E1. UART0 emits JSONL at 460800 baud. The default
 target is a classic ESP32-WROOM-32 PlatformIO `esp32dev` board. Change the board
 in `platformio.ini` and pins in `include/app_config.h`; do not reuse this map
 blindly on ESP32-C3, ESP32-S3 or WROVER/PSRAM boards. Read
@@ -35,19 +35,33 @@ py -3 tools/capture_serial.py COM5 captures/drive.jsonl
 py -3 tools/analyze_log.py captures/drive.jsonl
 ```
 
-Add `--channel A --start 10 --end 30 --plot` to the analyzer to filter and
-plot a capture. Plotting is optional and requires `matplotlib`.
+The `captures/` directory is local scratch space and is ignored by Git. When
+a session is worth keeping, copy the raw JSONL file together with its
+`.session.json`, `.bad.log`, and (when present) `.gaps.jsonl` sidecars into
+[`research/serial-steering/data/`](../../research/serial-steering/data/).
+Put regenerated plots in
+[`research/serial-steering/figures/`](../../research/serial-steering/figures/).
+Follow the data-management instructions in the research README so that raw
+evidence, metadata, and derived figures stay together.
 
-During capture, type `!mark LKAS enabled` or one of:
+Add `--channel A --start 10 --end 30 --plot` to the analyzer to filter and
+plot a capture. Plotting is optional and requires `matplotlib`. The capture
+tool requests compact frame JSON by default, increases the host serial receive
+buffer where supported, and reports missing sequence numbers while recording.
+The analyzer reconstructs provisional decoded fields from the authoritative raw
+bytes and automatically lists every detected `lkas_on_candidate` interval, so
+manual markers are not required. Use `--decoded-json` only for troubleshooting.
+
+When a passenger or stationary operator is available, the capture tool accepts
+these optional commands:
 
 ```text
 !status
-!stats reset
-!channel A auto|raw|4|5
-!channel B auto|raw|4|5
-!decode on|off
-!help
+!mark short description
 ```
+
+The host configures compact decoding automatically. Never operate the laptop or
+enter markers while driving.
 
 Auto mode evaluates 4-byte and 5-byte checksum hypotheses over five seconds.
 It classifies after at least 20 valid frames, 90% valid candidate attempts and

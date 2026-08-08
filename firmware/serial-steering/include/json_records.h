@@ -11,6 +11,7 @@ struct StatsSnapshot {
     std::uint32_t checksum_fail{};
     std::uint32_t parity_err{};
     std::uint32_t frame_err{};
+    std::uint32_t break_err{};
     std::uint32_t fifo_overflow{};
     std::uint32_t buffer_full{};
     std::uint32_t capture_queue_drop{};
@@ -36,7 +37,7 @@ bool format_stats_record(OutputRecord &output, std::int64_t time_us,
                          ChannelId channel, DirectionGuess direction,
                          const StatsSnapshot &stats);
 bool format_session_record(OutputRecord &output, const char *git_version,
-                           const char *boot_id, int vehicle_baud,
+                           const char *boot_id, int vehicle_baud, int console_baud,
                            int channel_a_gpio, int channel_b_gpio);
 bool format_mark_record(OutputRecord &output, std::int64_t time_us,
                         const char *text);

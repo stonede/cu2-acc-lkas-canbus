@@ -1,6 +1,6 @@
 # Evidence ledger
 
-Last consolidated: 2026-08-07.
+Last consolidated: 2026-08-08.
 
 | Claim | Status | Evidence | Required follow-up |
 |---|---|---|---|
@@ -15,6 +15,7 @@ Last consolidated: 2026-08-07.
 | Lateral control uses two single-wire serial paths between LKAS and EPS | Confirmed at wiring level | Harness/pin investigation and related implementation evidence | Capture both directions electrically |
 | Serial protocol is 9600 8E1 | Community/reference hypothesis | `LINInterfaceV2` and related hardware project | Verify with passive capture/logic analyzer |
 | LKAS→EPS frames are 4 bytes and EPS→LKAS frames are 5 bytes | Community/reference hypothesis | Existing Honda serial steering implementation | Verify frame boundaries and direction on subject car |
+| GPIO32/white carries EPS-to-LKAS and GPIO33/blue carries LKAS-to-EPS | Strongly supported | Captures 3/4: GPIO32 has checksum-valid 5-byte records; GPIO33 has checksum-valid 4-byte records; T-harness colours are documented | Record continuity from LKAS pins 3/5 to the T-harness and repeat |
 | The single-wire protocol is standard LIN | Open; do not assume | TJA102x modules are only physical-layer candidates | Look for break/sync/PID/master scheduling behaviour |
 | Radar link is one-wire and approximately 8.5 V | Observed | Voltage and connector investigation | Scope waveform and determine direction/framing |
 | Radar transmits one-way to ACC unit | Inferred | Topology and current working hypothesis | Simultaneous probing at both ends or controlled disconnect |
@@ -24,12 +25,13 @@ Last consolidated: 2026-08-07.
 | CANable termination must be disabled on the connected vehicle bus | Confirmed engineering requirement | Existing vehicle bus already terminated | Record jumper state in every capture |
 | Either ESP32 GND pin may be used | Confirmed for normal dev boards | Ground pins share board ground plane | Check exact board schematic if variant differs |
 | Passive serial logger cannot transmit on capture channels | Confirmed by current design | TX pins unassigned and TX buffers disabled | Scope outputs during boot/reset before vehicle use |
-| Tested LINTTL3-style module TX outputs are ESP32-safe when directly connected | Disproved | Both modules measured 4.89 V open-circuit; direct connection raised GPIO32/GPIO33 to approximately 3.8 V | Add verified 5 V-to-3.3 V conversion before reconnecting ESP32 |
-| Initial vehicle captures contained serial steering bytes | Disproved for the 2026-08-07 test setup | Two clean captures and one live check reported zero bytes on both UARTs | Repeat only after level conversion and synthetic UART validation; scope the full signal chain if still zero |
+| Tested LINTTL3-style module TX outputs are ESP32-safe when directly connected | Disproved | Both modules measured 4.89 V open-circuit; direct connection raised GPIO32/GPIO33 to approximately 3.8 V | Keep the pins marked TX disconnected; measure the pins marked RX separately |
+| Pins marked RX on the tested boards carry readable serial data | Observed in captures 3 and 4; electrical safety still open | Moving the ESP32 taps from the pins marked TX to the pins marked RX produced checksum-valid traffic on both channels with no added resistors | Measure RX-to-GND high level under vehicle power; use level conversion if it exceeds 3.6 V |
+| Initial vehicle captures contained serial steering bytes | Mixed by test setup | Captures 1 and 2 had zero bytes; captures 3 and 4 had checksum-valid traffic after moving the taps to the pins marked RX | Repeat under documented wiring and record the exact board pin label used |
 | Stock pass-through is required for an active serial gateway | Safety requirement | Failure analysis | Validate hardware under power loss/reset/stuck-output faults |
 | ACC pins 1/11 and LKAS pins 7/8 are the shared F-CAN pairs | Strongly supported | DMM snapshots near 2.7/2.2 V and existing CAN captures | Document connector view, continuity and differential capture at both connectors |
 | ACC grounds are pins 2/19/20 and LKAS ground is pin 9 | Observed/likely | Black wires and worksheet labels | Confirm low resistance and voltage drop to chassis/module ground |
-| LKAS pins 3 and 5 are the two steering serial channels | Working hypothesis | 6.3 V and 8.5 V snapshots plus related implementation evidence | Simultaneous passive waveform/UART capture and direction analysis |
+| LKAS pins 3 and 5 are the two steering serial channels | Strongly supported | White LKAS pin 3 is connected through the T-harness to GPIO32 and carries 5-byte EPS-to-LKAS candidates; blue LKAS pin 5 is connected to GPIO33 and carries 4-byte LKAS-to-EPS candidates in captures 3/4 | Record continuity from each connector pin to the T-harness and repeat on a second run |
 | LKAS pin 4 / ACC pin 3 is K-line | Open; name not confirmed | Both teal wires measured near 9.3 V in worksheet | Continuity test and framed traffic capture; do not assume ISO 9141 |
 | ACC pin 14 is the radar single-wire link | Open | Worksheet label and 4.3 V snapshot | Reconcile with prior ~8.5 V observation, verify connector orientation and scope both ends |
 | ACC pin 16 is write enable | Open; do not drive | Original worksheet working label only | Determine circuit destination and state transitions passively |

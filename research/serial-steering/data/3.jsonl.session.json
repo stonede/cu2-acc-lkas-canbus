@@ -1,0 +1,15 @@
+{
+  "host_started_utc": "2026-08-08T11:03:21.991034+00:00",
+  "port": "COM4",
+  "baud": 921600,
+  "output": "C:\\Repos\\openpilot\\honda-cu2-openpilot\\firmware\\serial-steering\\captures\\3.jsonl",
+  "host_ended_utc": "2026-08-08T11:04:08.117667+00:00",
+  "clean_shutdown": true,
+  "counts": {
+    "bad": 3,
+    "uart_error": 1,
+    "raw_fragment": 1004,
+    "stats": 10,
+    "frame": 4087
+  }
+}

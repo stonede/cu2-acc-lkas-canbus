@@ -22,7 +22,7 @@ timestamp. No estimated per-byte timestamp is currently emitted.
 - `raw_fragment`: globally monotonic `seq`, raw bytes, and `reason`:
   `raw_mode`, `auto_unclassified`, `resync_discard`, or `mode_change`.
 - `uart_error`: channel, cumulative error count, and one of `parity`, `frame`,
-  `fifo_overflow`, `buffer_full`, or `unknown_event`.
+  `break`, `fifo_overflow`, `buffer_full`, or `unknown_event`.
 - `stats`: cumulative byte/parser/error/loss counters and current direction.
   `capture_queue_drop` counts dropped chunks, `capture_bytes_dropped` counts
   their bytes, and `queue_drop` counts all records dropped from the output
@@ -34,6 +34,13 @@ timestamp. No estimated per-byte timestamp is currently emitted.
 Raw bytes remain authoritative. Names ending in `_candidate`, raw flag
 interpretations, directions selected by auto-classification, and all physical
 meaning are hypotheses. There are no physical torque units or sign normalization.
+
+Firmware and the host capture tool use compact `frame` records by default to
+reduce serial bandwidth. `tools/analyze_log.py` validates the raw frame checksum and
+reconstructs the same provisional fields offline. It also checks global `seq`
+continuity and derives LKAS-active time intervals from consecutive 4-byte frames
+whose `lkas_on_candidate` bit is set. Operator markers are optional and are not
+required for this analysis.
 
 Schema changes that remove or reinterpret fields require a new integer
 `schema`. Additive fields may be introduced within schema 1; readers should

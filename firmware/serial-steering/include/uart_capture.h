@@ -14,6 +14,7 @@ struct ChannelRuntimeStats {
     std::atomic<std::uint32_t> checksum_fail{};
     std::atomic<std::uint32_t> parity_err{};
     std::atomic<std::uint32_t> frame_err{};
+    std::atomic<std::uint32_t> break_err{};
     std::atomic<std::uint32_t> fifo_overflow{};
     std::atomic<std::uint32_t> buffer_full{};
     DropAccounting capture_drop{};

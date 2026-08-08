@@ -2,6 +2,8 @@
 
 #include "app_config.h"
 #include "console_commands.h"
+#include "driver/uart.h"
+#include "driver/uart_vfs.h"
 #include "esp_check.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -10,6 +12,14 @@
 
 extern "C" void app_main() {
     std::setvbuf(stdout, nullptr, _IONBF, 0);
+    ESP_ERROR_CHECK(uart_driver_install(
+        UART_NUM_0, app_config::kConsoleRxBufferBytes,
+        app_config::kConsoleTxBufferBytes, 0, nullptr, 0));
+    uart_vfs_dev_use_driver(UART_NUM_0);
+    ESP_ERROR_CHECK(uart_vfs_dev_port_set_rx_line_endings(
+                        UART_NUM_0, ESP_LINE_ENDINGS_LF) == 0
+                        ? ESP_OK
+                        : ESP_FAIL);
     g_capture_queue =
         xQueueCreate(app_config::kCaptureQueueDepth, sizeof(ByteChunk));
     g_output_queue =
