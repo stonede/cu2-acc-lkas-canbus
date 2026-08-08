@@ -600,12 +600,23 @@ The implementation is complete only when:
 
 ### `docs/WIRING.md`
 
-The original generic wiring sketch below assumed conventional LINTTL3 `TX`
-output labels. Follow-up captures showed that the tested boards produced
-readable data on their pins marked `RX` instead; the current board-specific
-mapping and voltage warning in `docs/WIRING.md` supersede that initial sketch.
+The original generic wiring sketch below assumed a conventional LINTTL3 `TX`
+output label. The tested boards use transceiver-side nomenclature instead:
+`RX` terminal -> TJA1021 `RXD` -> output to the MCU, while `TX` terminal ->
+TJA1021 `TXD` -> input from the MCU. The current board mapping and voltage
+warning in `docs/WIRING.md` supersede the historical sketch.
 
-Document this receive-only topology:
+Document this current receive-only topology:
+
+```text
+Vehicle single-wire line -> module LIN
+Module A terminal RX / TJA1021 RXD -> ESP32 GPIO32 (UART1 RX)
+Module B terminal RX / TJA1021 RXD -> ESP32 GPIO33 (UART2 RX)
+Module A/B terminal TX / TJA1021 TXD -> no ESP32 connection
+```
+
+The older generic sketch below is retained as historical planning context only;
+it is not current wiring.
 
 ```text
 Vehicle 12 V  ── fuse ──> VIN, module A
@@ -623,7 +634,11 @@ Module A/B INH ─> not connected
 ESP32 power ─> USB only; never vehicle 12 V directly
 ```
 
-Explicitly state that LINTTL3 `TX` is the TTL data output and `RX` is the TTL data input. The cheap module may use 5 V logic even though the bare TJA1021 is compatible with 3.3 V MCU thresholds; measure the actual board before connecting it to the ESP32.
+Explicitly state that the current path is vehicle single-wire line -> module
+`LIN` -> TJA1021 `RXD` / terminal `RX` -> ESP32 UART `RX`. The historical
+TX/TXD divider test is not current wiring. Measure the actual `RX`/`RXD` high
+level before connecting it to the ESP32 and use level conversion if it exceeds
+3.6 V.
 
 ### `docs/LOG_FORMAT.md`
 

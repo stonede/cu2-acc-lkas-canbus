@@ -24,10 +24,12 @@ Develop a safe, reproducible path toward comma.ai/openpilot support for a 2013 E
 - Corrected captures identify GPIO32/channel A as a checksum-valid 5-byte
   EPS-to-LKAS candidate and GPIO33/channel B as a checksum-valid 4-byte
   LKAS-to-EPS candidate, both at approximately 100 frames/s.
-- The successful captures used the physical-layer board pins marked `RX`
-  directly to GPIO32/GPIO33, with no added resistors. This pin-label behavior
-  is board-specific; the pins marked `TX` remain unsafe because the earlier
-  direct measurement reached approximately 4.89 V.
+- The tested boards use transceiver-side terminal names: `RX` terminal ->
+  TJA1021 `RXD` -> output to the MCU, while `TX` terminal -> TJA1021 `TXD` ->
+  input from the MCU. The successful captures used the current receive-only
+  path (`LIN` -> `RXD`/terminal `RX` -> ESP32 UART RX) directly to GPIO32/GPIO33,
+  with no added resistors. The `TX`/`TXD` terminals remain disconnected because
+  the earlier direct measurement reached approximately 4.89 V.
 - The working harness mapping is white wire/LKAS pin 3 -> GPIO32 -> 5-byte
   EPS-to-LKAS candidate, and blue wire/LKAS pin 5 -> GPIO33 -> 4-byte
   LKAS-to-EPS candidate. Continuity from connector cavities to the T-harness
@@ -44,6 +46,9 @@ Develop a safe, reproducible path toward comma.ai/openpilot support for a 2013 E
 - The tested CU2 exposes one shared F-CAN carrying the observed ACC, LKAS, PCM, VSA and HUD-related traffic.
 - No separate second CAN was found at the ACC unit in the tested facelift car.
 - The camera/ACC system and EPS also use two independent single-wire serial paths for lateral steering communication.
+- Subject-vehicle captures strongly support 9600 8E1 and checksum-valid 4-byte
+  LKAS-to-EPS / 5-byte EPS-to-LKAS framing; field semantics and standard LIN
+  bus semantics remain open.
 - The radar has a separate single-wire connection to the ACC unit; its protocol and direction are not yet confirmed.
 - Longitudinal integration cannot assume the standard Honda Nidec `0x1FA` path.
 

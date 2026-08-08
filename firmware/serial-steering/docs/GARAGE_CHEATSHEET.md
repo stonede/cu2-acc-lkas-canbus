@@ -11,20 +11,36 @@ disconnected. Direct connection raised GPIO32/GPIO33 to approximately **3.8 V**,
 above the documented ESP32 GPIO tolerance. Never connect those `TX` pins
 directly to the ESP32.
 
-The follow-up vehicle capture worked only when the data connection was moved to
-the pins marked `RX`. On the tested boards those pins were connected directly
-to GPIO32/GPIO33, with no added resistors or level converter. This is an
-empirical board-label observation, not a general safety guarantee.
-
-Before using the direct `RX`-to-GPIO wiring, power the modules with the ESP32
-disconnected and measure both pins marked `RX` to GND while the vehicle
-interface is active. Each high level must remain below 3.6 V. If not, use a
-5 V-to-3.3 V divider or buffer. Keep the pins marked `TX` disconnected.
-
-The divider remains the fallback for any data-output pin above 3.6 V:
+The follow-up vehicle capture worked with the terminal marked `RX`. The tested
+board terminals follow transceiver nomenclature:
 
 ```text
-Module TX ---- 10 kΩ ----+---- ESP32 GPIO32 or GPIO33
+RX terminal -> TJA1021 RXD -> output to MCU / ESP32 UART RX
+TX terminal -> TJA1021 TXD -> input from MCU
+```
+
+The current receive-only path is vehicle single-wire line -> module `LIN` ->
+TJA1021 `RXD` / terminal `RX` -> ESP32 UART `RX`. Captures 3 and 4 used the
+current RX path directly to GPIO32/GPIO33, with no added resistors or level
+converter. This proves that the path carried traffic, but the RX/RXD high
+level must still be measured before treating the direct connection as safe.
+
+Before using the direct `RX`/`RXD`-to-GPIO wiring, power the modules with the
+ESP32 disconnected and measure both terminals marked `RX` to GND while the
+vehicle interface is active. Each high level must remain below 3.6 V. If not,
+use a 5 V-to-3.3 V divider or buffer. Keep the `TX`/`TXD` terminals
+disconnected.
+
+### Historical TX/TXD divider test (not current wiring)
+
+The following divider is retained only as evidence from the unsafe historical
+TX test. It is not part of the current receive-only path above:
+
+For the historical `TX`/`TXD` output only, the divider was the fallback when
+the data-output pin exceeded 3.6 V:
+
+```text
+Historical module TX / TJA1021 TXD ---- 10 kΩ ----+---- ESP32 GPIO32 or GPIO33
                          |
                         20 kΩ
                          |
@@ -115,13 +131,15 @@ Do not flash while any unverified module output is attached to the ESP32.
 ## 5. Current tested wiring checklist
 
 For the boards used in the successful vehicle capture, connect the vehicle
-candidate lines to the modules' LIN terminals, then connect the pins marked
-`RX` directly to ESP32 GPIO32/GPIO33. Do not add resistors unless the voltage
-check below requires them. Leave the pins marked `TX` disconnected.
+candidate lines to the modules' `LIN` terminals, then connect the `RX` terminal
+(`TJA1021 RXD`, output to the MCU) directly to ESP32 GPIO32/GPIO33. Do not add
+resistors unless the RX/RXD voltage check below requires them. Leave the `TX`
+terminal (`TJA1021 TXD`, input from the MCU) disconnected.
 
 The current colour/channel mapping is white T-harness wire (LKAS pin 3) ->
-module A -> GPIO32 -> 5-byte EPS-to-LKAS candidate, and blue T-harness wire
-(LKAS pin 5) -> module B -> GPIO33 -> 4-byte LKAS-to-EPS candidate.
+module A LIN -> RX/RXD -> GPIO32 -> 5-byte EPS-to-LKAS framing, and blue
+T-harness wire (LKAS pin 5) -> module B LIN -> RX/RXD -> GPIO33 -> 4-byte
+LKAS-to-EPS framing.
 
 With the ESP32 disconnected, power the modules and measure both pins marked
 `RX` to GND. Each high level must remain below 3.6 V. Stop if either pin is
@@ -142,8 +160,10 @@ Perform wiring changes with ignition and module power off:
 1. Keep the stock LKAS↔EPS wiring continuous through the T-harness.
 2. Connect candidate vehicle line A only to the LIN/single-wire input of module A.
 3. Connect candidate vehicle line B only to the LIN/single-wire input of module B.
-4. Connect module A TX through its divider/buffer to GPIO32.
-5. Connect module B TX through its divider/buffer to GPIO33.
+4. Connect module A terminal TX / TJA1021 TXD through its divider/buffer to
+   GPIO32.
+5. Connect module B terminal TX / TJA1021 TXD through its divider/buffer to
+   GPIO33.
 6. Connect module grounds and ESP32 GND as a common reference.
 7. Leave module RX disconnected from the ESP32 and verify it is held logic high.
 8. Verify SLP is logic high; approximately 4.9 V was observed on the tested boards.
@@ -278,8 +298,9 @@ firmware but did not arrive as valid JSONL at the host. It should remain zero.
 
 If both `stats` records continue to report `bytes: 0` after the electrical
 interface is corrected and bench-tested, do not change live wiring. Scope or
-logic-analyze the vehicle line, module TX and divided GPIO node to localize
-where transitions disappear.
+logic-analyze the vehicle line, module `LIN`, terminal `RX`/`RXD` and ESP32 GPIO
+node to localize where transitions disappear. The old TX/divided-node test is
+documented only in section 5A.
 
 ## 9. Shutdown order
 

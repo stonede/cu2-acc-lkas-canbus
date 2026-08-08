@@ -6,20 +6,24 @@ The tested CU2 does not expose the expected openpilot-compatible CAN steering-co
 
 A CU2 openpilot port therefore likely needs dedicated serial-steering hardware or a gateway that can reproduce the stock protocol while preserving fail-safe pass-through.
 
-## Current protocol hypotheses
+## Current protocol status
 
 Based on `reddn/LINInterfaceV2` and `mlocoteta/serialSteeringHardware`:
 
-- 9600 baud;
-- 8 data bits, even parity, 1 stop bit (`8E1`);
-- 4-byte LKAS-to-EPS candidate frames observed on GPIO33/blue wire;
-- 5-byte EPS-to-LKAS candidate frames observed on GPIO32/white wire;
+- 9600 baud, 8 data bits, even parity, 1 stop bit (`8E1`) is strongly
+  supported on the subject vehicle by captures 3 and 4;
+- 4-byte LKAS-to-EPS framing on GPIO33/blue wire is strongly supported on the
+  subject vehicle;
+- 5-byte EPS-to-LKAS framing on GPIO32/white wire is strongly supported on the
+  subject vehicle;
 - first-byte plausibility rule `(byte >> 4) < 4`;
 - checksum is calculated from preceding bytes, folded into 7 bits and placed in the `0x80–0xFF` range.
 
-The checksum-valid lengths and direction mapping are strongly supported by
-captures 3 and 4. Field meanings and the claim that this is standard LIN
-remain provisional.
+The ESP32 was configured for 9600 8E1 and captured 4,087 frames on channel A
+and 20,063 frames on channel B. The analyzer reports checksum-valid 4-byte and
+5-byte streams at approximately 100 frames/s per channel. Field meanings,
+message ownership outside the observed direction mapping and the claim that
+this is standard LIN remain provisional.
 
 ## Logger implementation
 
@@ -40,18 +44,23 @@ The implementation must remain passive until the protocol is independently under
 
 ## Physical-layer warning
 
-TJA1020/TJA1021-style boards are being used as single-wire physical-layer converters. Their use does not prove the protocol is standard LIN.
+TJA1020/TJA1021-style boards are being used as single-wire physical-layer
+converters. Their use does not prove the protocol is standard LIN.
 
-Cheap LINTTL3 boards may expose 5 V TTL output. Measure the board output and level-shift to 3.3 V before an ESP32 input when required.
+The tested board terminals follow transceiver nomenclature:
 
-Important board-label finding from the follow-up vehicle test: on the two boards
-used here, readable data reached the ESP32 from the pins marked `RX`, not the
-pins marked `TX`. The successful captures used a direct RX-to-ESP32 connection
-with no added resistors or level converter. This is board-specific evidence;
-measure the pin marked `RX` directly before reusing this wiring, and use level
-conversion if it exceeds 3.6 V. Keep the pins marked `TX` disconnected because
-the earlier TX test measured 4.89 V and raised the ESP32 GPIOs to approximately
-3.8 V.
+```text
+RX terminal -> TJA1021 RXD -> output to MCU
+TX terminal -> TJA1021 TXD -> input from MCU
+```
+
+The current receive-only path is therefore vehicle single-wire line -> module
+`LIN` -> TJA1021 `RXD` / terminal `RX` -> ESP32 UART `RX`. The successful
+captures used a direct RX-to-ESP32 connection with no added resistors or level
+converter. Measure the `RX`/`RXD` high level before reusing this wiring, and use
+level conversion if it exceeds 3.6 V. Keep the `TX`/`TXD` terminals disconnected
+because the earlier TX test measured 4.89 V and raised the ESP32 GPIOs to
+approximately 3.8 V.
 
 The physical channel mapping is now also constrained: the white T-harness wire
 (LKAS connector pin 3) was connected to GPIO32 and carried the 5-byte
@@ -64,13 +73,13 @@ from the connector cavities to the harness wires should still be recorded.
 The first in-vehicle attempt on 2026-08-07 produced two clean host sessions but
 zero received UART bytes on both channels. A subsequent electrical check found
 4.89 V on both module TX outputs with the ESP32 disconnected and approximately
-3.8 V at GPIO32/GPIO33 when directly connected. The tested module outputs are
-therefore not ESP32-safe and the zero-byte captures are not valid evidence
-against the protocol hypothesis.
+3.8 V at GPIO32/GPIO33 when directly connected. The tested TX/TXD outputs are
+therefore not ESP32-safe and the zero-byte captures are not evidence against
+the now strongly supported 9600 8E1 framing.
 
 The follow-up test then moved both data taps to the pins marked `RX` and
-produced captures 3 and 4. Full measurements, capture counts, the label
-discrepancy and the ordered retest procedure are recorded in the
+produced captures 3 and 4. Full measurements, capture counts, the terminal
+nomenclature and the ordered retest procedure are recorded in the
 [2026-08-07 vehicle test report](../firmware/serial-steering/docs/VEHICLE_TEST_2026-08-07.md).
 
 ## Capture goals

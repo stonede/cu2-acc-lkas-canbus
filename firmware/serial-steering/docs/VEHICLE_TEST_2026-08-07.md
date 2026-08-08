@@ -6,11 +6,12 @@ This test was the first attempt to capture both candidate LKAS↔EPS single-wire
 channels with the receive-only ESP32 logger and two LINTTL3-style physical-layer
 modules on the subject vehicle.
 
-The result does **not** validate or disprove the current 9600-baud 8E1 protocol
-hypothesis. The test exposed an out-of-spec 5 V logic interface that must be
-corrected before the absence of received bytes can be interpreted.
+At the time, this first attempt did **not** validate or disprove the 9600-baud
+8E1 framing because it used the wrong transceiver terminal. The test exposed an
+out-of-spec 5 V logic interface; captures 3 and 4 later provided strong
+subject-vehicle evidence for 9600 8E1 and the 4/5-byte framing.
 
-## Electrical observations
+## Historical electrical observations from the initial TX/TXD test
 
 Measurements were made with the modules connected to the running vehicle:
 
@@ -73,17 +74,23 @@ Not established by this test:
   functional;
 - baud rate, parity, frame length, direction or checksum.
 
-The zero-byte result must not be used to reject the 9600-baud 8E1 hypothesis.
-The electrical interface must first be corrected and validated.
+The historical zero-byte result from captures 1 and 2 must not be used against
+the now strongly supported 9600-baud 8E1 framing. It came from the earlier
+TX/TXD connection, before the current RX/RXD receive-only path was used.
 
-## Required correction before reconnecting the ESP32
+## Historical TX/TXD correction (not current wiring)
+
+This section applies only to the earlier connection to the terminal marked
+`TX` / TJA1021 `TXD`. The current receive-only path is vehicle single-wire line
+-> module `LIN` -> TJA1021 `RXD` / terminal `RX` -> ESP32 UART `RX`, as described
+in `docs/WIRING.md`.
 
 Do not reconnect either raw module TX output directly to the ESP32. Use a
-proper 5 V-tolerant input buffer powered from 3.3 V, or for the current passive
-9600-baud prototype use one resistor divider per channel:
+proper 5 V-tolerant input buffer powered from 3.3 V, or for that historical
+passive test use one resistor divider per channel:
 
 ```text
-Module TX ---- 10 kΩ ----+---- ESP32 GPIO32 or GPIO33
+Historical module TX / TJA1021 TXD ---- 10 kΩ ----+---- ESP32 GPIO32 or GPIO33
                          |
                         20 kΩ
                          |
@@ -99,9 +106,9 @@ a DMM. It should be approximately 3.2–3.3 V and must remain below 3.6 V.
 
 ## Ordered next steps from the initial TX test
 
-The following list records the safety plan before the board-label discrepancy
-was found. For the currently tested wiring, use the later RX-pin clarification
-and the current checklist in `docs/WIRING.md`.
+The following list records the safety plan before the terminal nomenclature was
+identified. It is historical only. For the current wiring, use the RX/RXD
+checklist in `docs/WIRING.md`.
 
 1. Install and independently measure the two 5 V-to-3.3 V input dividers or a
    suitable 5 V-tolerant 3.3 V buffer.
@@ -116,9 +123,9 @@ and the current checklist in `docs/WIRING.md`.
    engine running, LKAS unavailable, and LKAS ready. Markers are optional when
    a stationary operator or passenger is available.
 6. If byte counters remain zero, scope or logic-analyze three points at once:
-   the vehicle candidate line, the module TX output, and the divided ESP32 GPIO
-   node. This will identify whether activity is absent on the vehicle line,
-   lost in the transceiver, or lost in the level converter/wiring.
+   the vehicle candidate line, the historical TX/TXD output, and the divided
+   ESP32 GPIO node. This will identify whether activity is absent on the vehicle
+   line, lost in the transceiver, or lost in the level converter/wiring.
 7. Only after stationary traffic is observed, perform synchronized controlled
    driving captures with F-CAN. For solo tests, do not operate the laptop while
    driving; derive LKAS-active intervals from the serial data after the drive.
@@ -128,10 +135,11 @@ this test or by these next steps.
 
 ## Follow-up captures and logger hardening — 2026-08-08
 
-After moving the data connections from the pins marked `TX` to the pins marked
-`RX`, captures 3 and 4 established valid traffic on both inputs at approximately
-100 frames/s per channel. The operator reports that these captures used a
-direct RX-to-ESP32 connection with no added resistors or level converter.
+After correcting the initial TX/TXD connection to the tested board's
+transceiver-side nomenclature and using terminal `RX` / TJA1021 `RXD`, captures
+3 and 4 established valid traffic on both inputs at approximately 100 frames/s
+per channel. The operator reports that these captures used a direct
+RX/RXD-to-ESP32 connection with no added resistors or level converter.
 The high-level voltage of the pins marked `RX` was not recorded separately in
 that test, so direct operation is evidence of functionality only, not of GPIO
 electrical safety.

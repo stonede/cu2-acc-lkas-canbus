@@ -41,7 +41,7 @@ The machine-readable transcription is stored in
 > physical connector orientation before fabricating or probing a harness.
 
 
-| Pin | Wire colour | Observed voltage | Working label from worksheet | Current interpretation |
+| Pin | Wire colour | Observed voltage | Worksheet label (unverified) | Current interpretation |
 |---:|---|---:|---|---|
 | 1 | white | 2.7 V | CAN H | **Strongly supported** F-CAN high; confirm by continuity and differential capture |
 | 2 | black | — | ground | **Observed/likely** ground; confirm low resistance to chassis/module ground |
@@ -100,11 +100,13 @@ following working physical mapping:
 The mapping assumes the white and blue wires in the T-harness are continuous
 with LKAS pins 3 and 5 as shown in the worksheet; record a continuity check to
 promote this from colour-plus-capture evidence to confirmed pin identity. The
-physical-layer boards produced readable data from their pins marked `RX`; no
-added resistors were used in captures 3 and 4. The high-level voltage of those
-`RX` pins was not recorded separately, so electrical safety remains an open
-follow-up. The earlier board pins marked `TX` measured 4.89 V and are not the
-same as the working direct data connection.
+tested boards use transceiver-side terminal names: `RX` terminal -> TJA1021
+`RXD` -> output to the MCU, while `TX` terminal -> TJA1021 `TXD` -> input from
+the MCU. The current receive-only path is `LIN` -> `RXD`/terminal `RX` -> ESP32
+UART RX. No added resistors were used in captures 3 and 4. The high-level
+voltage of those `RX`/`RXD` pins was not recorded separately, so electrical
+safety remains an open follow-up. The earlier `TX`/`TXD` measurement reached
+4.89 V and is not the working direct data connection.
 
 ## Important unresolved discrepancy
 

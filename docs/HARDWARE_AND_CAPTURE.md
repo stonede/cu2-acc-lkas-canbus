@@ -45,14 +45,20 @@ A resistance near 120 ohms on an isolated bench harness with one enabled CANable
 
 ## Serial logger topology
 
-Keep the stock LKAS-to-EPS wiring intact. Connect each serial candidate wire only to the LIN/single-wire input of one physical-layer module. Connect the module's TTL output to an ESP32 RX pin through level conversion if the module outputs 5 V logic.
+Keep the stock LKAS-to-EPS wiring intact. Connect each serial candidate wire
+only to the module `LIN` / single-wire input. The current receive-only path on
+the tested boards is:
 
-Board-label exception observed on the tested modules: readable data was obtained
-from the pins marked `RX`, not the pins marked `TX`. Captures 3 and 4 used a
-direct connection from those `RX` pins to ESP32 GPIO32/GPIO33 with no added
-resistors. This is not a general safety assumption: measure the actual `RX`
-pin under power and use level conversion whenever it exceeds 3.6 V. The pins
-marked `TX` previously measured 4.89 V and must remain disconnected from the
+```text
+vehicle single-wire line -> TJA1021 LIN -> TJA1021 RXD / terminal RX -> ESP32 UART RX
+```
+
+The tested board terminals follow transceiver nomenclature: `RX` terminal ->
+TJA1021 `RXD` -> output to the MCU, while `TX` terminal -> TJA1021 `TXD` ->
+input from the MCU. Captures 3 and 4 used the `RX` terminals directly to ESP32
+GPIO32/GPIO33 with no added resistors. Measure the actual `RX`/`RXD` high level
+under power and use level conversion whenever it exceeds 3.6 V. The `TX`/`TXD`
+terminals previously measured 4.89 V and must remain disconnected from the
 ESP32.
 
 Canonical wiring and firmware constraints live in [`firmware/serial-steering/docs/WIRING.md`](../firmware/serial-steering/docs/WIRING.md).

@@ -70,7 +70,10 @@ The lateral steering link is not represented by the conventional Honda CAN steer
 - probable LKAS-to-EPS command direction;
 - probable EPS-to-LKAS feedback direction.
 
-Reference implementations suggest 9600 baud, 8E1, with 4-byte and 5-byte frames respectively, but this still requires capture on the subject car.
+Subject-vehicle captures 3 and 4 strongly support 9600 baud, 8E1, with
+checksum-valid 4-byte and 5-byte frames respectively. Independent bit-timing
+measurement and field-level interpretation are still required, and the
+protocol must not yet be called standard LIN.
 
 ## Radar link
 

@@ -28,16 +28,19 @@ capture and metadata are what make the result reproducible.
 ## Current manifest
 
 Capture 3 and capture 4 were collected in the vehicle on 2026-08-08. The
-physical-layer modules were connected to the pins marked `RX`, directly from
-module RX to ESP32 input, without added resistors. The vehicle-side high-level
-voltage of those RX pins was not measured separately, so the captures prove
+tested board terminals follow transceiver nomenclature: `RX` terminal ->
+TJA1021 `RXD` -> output to the MCU, while `TX` terminal -> TJA1021 `TXD` ->
+input from the MCU. The current receive-only path is vehicle single-wire line
+-> module `LIN` -> TJA1021 `RXD` / terminal `RX` -> ESP32 UART `RX`. The
+captures used that path without added resistors. The vehicle-side high-level
+voltage of the RX/RXD pins was not measured separately, so the captures prove
 that the path carried traffic but do not prove that the ESP32 input voltage is
 electrically safe.
 
 | Capture | Raw data | Duration | Frames | Host sequence loss | Notes |
 |---|---|---:|---:|---:|---|
-| 3 | [`data/3.jsonl`](data/3.jsonl) | 46.1 s | 4,087 | 2,438 | GPIO32/A: 5-byte candidate; GPIO33/B: 4-byte candidate; no active interval detected |
-| 4 | [`data/4.jsonl`](data/4.jsonl) | 188.5 s | 20,063 | 15,387 | One automatically detected LKAS-active interval at 132.123-136.054 s |
+| 3 | [`data/3.jsonl`](data/3.jsonl) | 46.1 s | 4,087 | 2,438 | GPIO32/A: checksum-valid 5-byte framing; GPIO33/B: checksum-valid 4-byte framing; no active interval detected |
+| 4 | [`data/4.jsonl`](data/4.jsonl) | 188.5 s | 20,063 | 15,387 | Same framing; one automatically detected LKAS-active interval at 132.123-136.054 s |
 
 The capture sidecars are part of the dataset:
 
